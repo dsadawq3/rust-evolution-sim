@@ -38,6 +38,7 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route("/api/simulations", get(simulations_list_handler))
         .route("/api/simulations/new", post(new_simulation_handler))
         .route("/api/simulations/switch/:name", post(switch_simulation_handler))
+        .route("/api/config/update", post(config_update_handler))
         .route("/api/creature/:id", get(creature_detail_handler))
         .route("/api/speed", post(speed_handler))
         .route("/api/action/meteor", post(meteor_handler))
@@ -177,6 +178,31 @@ async fn switch_simulation_handler(
 
     state.telemetry.log(0, "INFO", format!("Switched to simulation '{}'", name));
     Json("SWITCHED")
+}
+
+#[derive(Deserialize)]
+pub struct ConfigUpdatePayload {
+    pub mutation_rate: Option<f32>,
+    pub food_spawn_rate: Option<f32>,
+    pub base_metabolism: Option<f32>,
+}
+
+async fn config_update_handler(
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<ConfigUpdatePayload>,
+) -> Json<&'static str> {
+    let mut w = state.world.write();
+    if let Some(m) = payload.mutation_rate {
+        w.config.mutation_rate_multiplier = m.clamp(0.05, 20.0);
+    }
+    if let Some(f) = payload.food_spawn_rate {
+        w.config.food_spawn_per_sec = f.clamp(0.0, 200.0);
+    }
+    if let Some(b) = payload.base_metabolism {
+        w.config.base_metabolism = b.clamp(0.005, 0.5);
+    }
+    state.telemetry.log(w.tick, "CONFIG", "World logic parameters updated via settings panel".to_string());
+    Json("CONFIG_UPDATED")
 }
 
 async fn creature_detail_handler(

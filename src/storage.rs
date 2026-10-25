@@ -3,10 +3,13 @@ use crate::config::SimConfig;
 use crate::species::SpeciesInfo;
 use crate::telemetry::SimEvent;
 use crate::world::HistoryPoint;
+use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
+use std::collections::VecDeque;
 use std::fs::{self, OpenOptions};
 use std::io::Write;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::SystemTime;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -39,16 +42,20 @@ pub struct DetailedHistoryEntry {
 pub struct StorageManager {
     base_dir: PathBuf,
     active_sim: String,
+    history_cache: Arc<RwLock<VecDeque<DetailedHistoryEntry>>>,
 }
 
 impl StorageManager {
     pub fn new(active_sim_name: &str) -> Self {
         let base_dir = PathBuf::from("simulations");
+        let cache = Arc::new(RwLock::new(VecDeque::with_capacity(600)));
         let mgr = StorageManager {
             base_dir,
             active_sim: active_sim_name.to_string(),
+            history_cache: cache,
         };
         mgr.ensure_sim_dir(active_sim_name);
+        mgr.preload_cache(active_sim_name);
         mgr
     }
 
@@ -63,6 +70,29 @@ impl StorageManager {
     pub fn set_active_name(&mut self, name: &str) {
         self.active_sim = name.to_string();
         self.ensure_sim_dir(name);
+        self.preload_cache(name);
+    }
+
+    fn preload_cache(&self, name: &str) {
+        let path = self.sim_path(name).join("history.jsonl");
+        let mut entries = Vec::new();
+        if let Ok(content) = fs::read_to_string(&path) {
+            for line in content.lines() {
+                let trimmed = line.trim();
+                if trimmed.is_empty() {
+                    continue;
+                }
+                if let Ok(entry) = serde_json::from_str::<DetailedHistoryEntry>(trimmed) {
+                    entries.push(entry);
+                }
+            }
+        }
+        let mut cache = self.history_cache.write();
+        cache.clear();
+        let start = entries.len().saturating_sub(400);
+        for entry in entries.into_iter().skip(start) {
+            cache.push_back(entry);
+        }
     }
 
     pub fn ensure_sim_dir(&self, name: &str) {
@@ -149,7 +179,6 @@ impl StorageManager {
         point: &HistoryPoint,
         species: &[SpeciesInfo],
     ) {
-        let path = self.sim_path(name).join("history.jsonl");
         let entry = DetailedHistoryEntry {
             tick: point.tick,
             population: point.population,
@@ -164,6 +193,15 @@ impl StorageManager {
             species: species.to_vec(),
         };
 
+        if name == self.active_sim {
+            let mut cache = self.history_cache.write();
+            if cache.len() >= 500 {
+                cache.pop_front();
+            }
+            cache.push_back(entry.clone());
+        }
+
+        let path = self.sim_path(name).join("history.jsonl");
         if let Ok(json_line) = serde_json::to_string(&entry) {
             if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(path) {
                 let _ = writeln!(file, "{}", json_line);
@@ -180,11 +218,21 @@ impl StorageManager {
     }
 
     pub fn read_recent_history(&self, name: &str, limit: usize) -> Vec<DetailedHistoryEntry> {
+        if name == self.active_sim {
+            let cache = self.history_cache.read();
+            let skip = cache.len().saturating_sub(limit);
+            return cache.iter().skip(skip).cloned().collect();
+        }
+
         let path = self.sim_path(name).join("history.jsonl");
         let mut entries = Vec::new();
         if let Ok(content) = fs::read_to_string(path) {
             for line in content.lines() {
-                if let Ok(entry) = serde_json::from_str::<DetailedHistoryEntry>(line) {
+                let trimmed = line.trim();
+                if trimmed.is_empty() {
+                    continue;
+                }
+                if let Ok(entry) = serde_json::from_str::<DetailedHistoryEntry>(trimmed) {
                     entries.push(entry);
                 }
             }
