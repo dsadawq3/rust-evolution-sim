@@ -39,6 +39,7 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route("/api/simulations", get(simulations_list_handler))
         .route("/api/simulations/new", post(new_simulation_handler))
         .route("/api/simulations/switch/:name", post(switch_simulation_handler))
+        .route("/api/simulations/delete/:name", post(delete_simulation_handler))
         .route("/api/config/current", get(current_config_handler))
         .route("/api/config/update", post(config_update_handler))
         .route("/api/creature/:id", get(creature_detail_handler))
@@ -158,11 +159,14 @@ async fn new_simulation_handler(
     if let Some(m) = payload.mutation_rate { config.mutation_rate_multiplier = m; }
     if let Some(r) = payload.enable_pioneer_reseeding { config.enable_pioneer_reseeding = r; }
 
-    let safe_name = payload.name.trim().replace(|c: char| !c.is_alphanumeric() && c != '_' && c != '-', "_");
-    let safe_name = if safe_name.is_empty() { "sim_custom".to_string() } else { safe_name };
+    let safe_name = {
+        let storage = state.storage.read();
+        storage.get_unique_sim_name(&payload.name)
+    };
 
     {
         let mut storage = state.storage.write();
+        storage.reset_sim_files(&safe_name);
         storage.set_active_name(&safe_name);
         storage.save_config(&safe_name, &config);
     }
@@ -172,8 +176,22 @@ async fn new_simulation_handler(
         *w = World::new(config);
     }
 
-    state.telemetry.log(0, "INFO", format!("Создан и запущен новый мир '{}'", safe_name));
+    state.telemetry.log(0, "INFO", format!("Создан и запущен новый изолированный мир '{}'", safe_name));
     Json(safe_name)
+}
+
+async fn delete_simulation_handler(
+    State(state): State<Arc<AppState>>,
+    Path(name): Path<String>,
+) -> Result<Json<&'static str>, (axum::http::StatusCode, String)> {
+    let storage = state.storage.read();
+    match storage.delete_simulation(&name) {
+        Ok(()) => {
+            state.telemetry.log(0, "INFO", format!("Симуляция '{}' удалена с диска", name));
+            Ok(Json("DELETED"))
+        }
+        Err(e) => Err((axum::http::StatusCode::BAD_REQUEST, e)),
+    }
 }
 
 async fn switch_simulation_handler(

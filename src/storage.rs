@@ -143,6 +143,67 @@ impl StorageManager {
         }
     }
 
+    pub fn get_unique_sim_name(&self, base_name: &str) -> String {
+        let clean = base_name
+            .trim()
+            .replace(|c: char| !c.is_alphanumeric() && c != '_' && c != '-', "_");
+        let clean = if clean.is_empty() {
+            "world".to_string()
+        } else {
+            clean
+        };
+
+        let path = self.sim_path(&clean);
+        if !path.exists() {
+            return clean;
+        }
+
+        let mut idx = 2;
+        loop {
+            let candidate = format!("{}_{}", clean, idx);
+            if !self.sim_path(&candidate).exists() {
+                return candidate;
+            }
+            idx += 1;
+        }
+    }
+
+    pub fn reset_sim_files(&self, name: &str) {
+        let path = self.sim_path(name);
+        let _ = fs::create_dir_all(&path);
+        let _ = fs::remove_file(path.join("history.jsonl"));
+        let _ = fs::remove_file(path.join("timeline.json"));
+        let _ = fs::remove_file(path.join("summary.json"));
+        let meta = SimulationMeta {
+            name: name.to_string(),
+            created_at: SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs(),
+            last_tick: 0,
+            total_births: 0,
+            total_deaths: 0,
+            peak_population: 0,
+            description: format!("Fresh simulation '{}'", name),
+        };
+        self.save_meta(name, &meta);
+        let mut cache = self.history_cache.write();
+        cache.clear();
+    }
+
+    pub fn delete_simulation(&self, name: &str) -> Result<(), String> {
+        if name == self.active_sim {
+            return Err("Нельзя удалить активную запущенную симуляцию! Сначала переключитесь на другую.".to_string());
+        }
+        let path = self.sim_path(name);
+        if path.exists() {
+            fs::remove_dir_all(&path).map_err(|e| e.to_string())?;
+            Ok(())
+        } else {
+            Err("Симуляция не найдена на диске".to_string())
+        }
+    }
+
     pub fn list_simulations(&self) -> Vec<SimulationMeta> {
         let mut list = Vec::new();
         if let Ok(entries) = fs::read_dir(&self.base_dir) {

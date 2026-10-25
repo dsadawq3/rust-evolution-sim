@@ -655,7 +655,7 @@
       <div id="launch-new-form" style="display: none;">
         <div class="form-group">
           <label><span>Имя папки нового мира:</span></label>
-          <input type="text" id="launcher-sim-name" value="world_nature" placeholder="например, savannah_1">
+          <input type="text" id="launcher-sim-name" placeholder="например, nature_2, savannah_1">
         </div>
         <div class="form-group">
           <label><span>Стартовая популяция блёбов:</span> <span class="slider-val" id="val-launch-pop">160</span></label>
@@ -1440,11 +1440,24 @@
       loadLauncherSimList();
     });
 
-    document.getElementById('tab-launch-new').addEventListener('click', () => {
+    document.getElementById('tab-launch-new').addEventListener('click', async () => {
       document.getElementById('tab-launch-new').classList.add('active');
       document.getElementById('tab-launch-existing').classList.remove('active');
       document.getElementById('launch-new-form').style.display = 'block';
       document.getElementById('launch-existing-list').style.display = 'none';
+
+      try {
+        const res = await fetch('/api/simulations');
+        const list = await res.json();
+        const existingNames = new Set(list.map(s => s.name));
+        let num = list.length + 1;
+        while (existingNames.has(`world_${num}`)) {
+          num++;
+        }
+        document.getElementById('launcher-sim-name').value = `world_${num}`;
+      } catch (e) {
+        document.getElementById('launcher-sim-name').value = 'world_new';
+      }
     });
 
     async function loadLauncherSimList() {
@@ -1460,12 +1473,15 @@
           const card = document.createElement('div');
           card.className = `sim-card ${isActive ? 'active' : ''}`;
           card.innerHTML = `
-            <div>
+            <div style="flex: 1;">
               <div class="sim-name">${item.name} ${isActive ? '<span style="color:#4ade80;font-size:12px;">(Активен)</span>' : ''}</div>
               <div class="sim-meta">Тик: ${item.last_tick} • Рождений: ${item.total_births} • Смертей: ${item.total_deaths} • Пик: ${item.peak_population}</div>
             </div>
-            <div>
-              ${!isActive ? `<button class="btn active btn-launcher-switch" data-sim="${item.name}">Войти в мир</button>` : '<button class="btn-return btn-close-modal">В симуляцию</button>'}
+            <div style="display:flex; gap:8px; align-items:center;">
+              ${!isActive ? `
+                <button class="btn active btn-launcher-switch" data-sim="${item.name}">Войти в мир</button>
+                <button class="btn danger btn-launcher-delete" data-sim="${item.name}" title="Удалить мир со всеми файлами">🗑️</button>
+              ` : '<button class="btn-return btn-close-modal">В симуляцию</button>'}
             </div>
           `;
           container.appendChild(card);
@@ -1480,6 +1496,25 @@
             resetAllCharts();
             syncHistory(name);
             closeLauncher();
+          });
+        });
+
+        document.querySelectorAll('.btn-launcher-delete').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            const name = e.target.getAttribute('data-sim');
+            if (confirm(`Вы действительно хотите удалить мир '${name}' со всеми логами и файлами с диска?`)) {
+              try {
+                const res = await fetch(`/api/simulations/delete/${name}`, { method: 'POST' });
+                if (res.ok) {
+                  loadLauncherSimList();
+                } else {
+                  const txt = await res.text();
+                  alert(`Не удалось удалить: ${txt}`);
+                }
+              } catch (err) {
+                alert(`Ошибка удаления: ${err.message}`);
+              }
+            }
           });
         });
 
@@ -1504,18 +1539,20 @@
 
     // Create New World Submit
     document.getElementById('btn-submit-create-sim').addEventListener('click', async () => {
-      const name = document.getElementById('launcher-sim-name').value;
+      const rawName = document.getElementById('launcher-sim-name').value.trim();
+      const name = rawName.length > 0 ? rawName : 'world';
       const creatures = parseInt(document.getElementById('launcher-sim-pop').value);
       const food = parseInt(document.getElementById('launcher-sim-food').value);
       const world_size = parseFloat(document.getElementById('launcher-sim-size').value);
       const mutation_rate = parseFloat(document.getElementById('launcher-sim-mut').value);
       const enable_pioneer_reseeding = document.getElementById('launcher-sim-reseed').value === 'true';
 
-      await fetch('/api/simulations/new', {
+      const res = await fetch('/api/simulations/new', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, creatures, food, world_size, mutation_rate, enable_pioneer_reseeding })
       });
+      const createdName = await res.json();
 
       // Update food spawn rate & metabolism in this new world
       const food_spawn_rate = parseFloat(document.getElementById('launcher-sim-food-rate').value);
@@ -1526,10 +1563,11 @@
         body: JSON.stringify({ food_spawn_rate, base_metabolism, mutation_rate, enable_pioneer_reseeding })
       });
 
-      currentSimName = name;
-      document.getElementById('active-sim-badge').innerText = name;
+      currentSimName = createdName;
+      document.getElementById('active-sim-badge').innerText = createdName;
       resetAllCharts();
-      syncHistory(name);
+      syncHistory(createdName);
+      loadLauncherSimList();
       closeLauncher();
     });
 
