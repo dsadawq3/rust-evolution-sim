@@ -2,7 +2,7 @@
 use crate::config::SimConfig;
 use crate::species::SpeciesInfo;
 use crate::telemetry::SimEvent;
-use crate::world::HistoryPoint;
+use crate::world::{HistoryPoint, WorldStats};
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
@@ -20,6 +20,20 @@ pub struct SimulationMeta {
     pub total_births: u64,
     pub total_deaths: u64,
     pub peak_population: usize,
+    pub description: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SimulationSummary {
+    pub name: String,
+    pub archived_at: u64,
+    pub total_ticks_lived: u64,
+    pub peak_population: usize,
+    pub final_population: usize,
+    pub total_births: u64,
+    pub total_deaths: u64,
+    pub max_generation: usize,
+    pub dominant_species: String,
     pub description: String,
 }
 
@@ -172,7 +186,7 @@ impl StorageManager {
         }
     }
 
-    // Append periodic history snapshot (called every 100-200 ticks)
+    // Append periodic history snapshot
     pub fn append_history(
         &self,
         name: &str,
@@ -241,6 +255,56 @@ impl StorageManager {
             entries.split_off(entries.len() - limit)
         } else {
             entries
+        }
+    }
+
+    // Safe Archive & Reset: creates concise summary.json & runs_archive.jsonl, wipes tick history
+    pub fn archive_and_reset(&self, name: &str, stats: &WorldStats, max_gen: usize, dominant_spec: &str) {
+        let summary = SimulationSummary {
+            name: name.to_string(),
+            archived_at: SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs(),
+            total_ticks_lived: stats.tick,
+            peak_population: stats.population,
+            final_population: stats.population,
+            total_births: stats.total_births,
+            total_deaths: stats.total_deaths,
+            max_generation: max_gen,
+            dominant_species: dominant_spec.to_string(),
+            description: format!(
+                "Сводка забега: мир '{}' прожил {} тиков. Достигнуто поколение {}. Рождений: {}, Смертей: {}.",
+                name, stats.tick, max_gen, stats.total_births, stats.total_deaths
+            ),
+        };
+
+        // 1. Write summary.json
+        let summary_path = self.sim_path(name).join("summary.json");
+        if let Ok(json) = serde_json::to_string_pretty(&summary) {
+            let _ = fs::write(summary_path, json);
+        }
+
+        // 2. Append to runs_archive.jsonl
+        let archive_path = self.sim_path(name).join("runs_archive.jsonl");
+        if let Ok(line) = serde_json::to_string(&summary) {
+            if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(archive_path) {
+                let _ = writeln!(file, "{}", line);
+            }
+        }
+
+        // 3. Clear detailed history.jsonl for new run
+        let hist_path = self.sim_path(name).join("history.jsonl");
+        let _ = fs::write(hist_path, "");
+
+        // 4. Reset events.log with header
+        let events_path = self.sim_path(name).join("events.log");
+        let _ = fs::write(events_path, format!("[Tick 0] [RESET] Симуляция '{}' сброшена. Краткий архив сохранен в summary.json.\n", name));
+
+        // 5. Reset in-memory history cache
+        if name == self.active_sim {
+            let mut cache = self.history_cache.write();
+            cache.clear();
         }
     }
 }

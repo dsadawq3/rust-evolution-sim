@@ -128,6 +128,7 @@ pub struct NewSimPayload {
     pub food: Option<usize>,
     pub world_size: Option<f32>,
     pub mutation_rate: Option<f32>,
+    pub enable_pioneer_reseeding: Option<bool>,
 }
 
 async fn new_simulation_handler(
@@ -142,6 +143,7 @@ async fn new_simulation_handler(
         config.world_height = w;
     }
     if let Some(m) = payload.mutation_rate { config.mutation_rate_multiplier = m; }
+    if let Some(r) = payload.enable_pioneer_reseeding { config.enable_pioneer_reseeding = r; }
 
     let safe_name = payload.name.trim().replace(|c: char| !c.is_alphanumeric() && c != '_' && c != '-', "_");
     let safe_name = if safe_name.is_empty() { "sim_custom".to_string() } else { safe_name };
@@ -157,7 +159,7 @@ async fn new_simulation_handler(
         *w = World::new(config);
     }
 
-    state.telemetry.log(0, "INFO", format!("Created and launched new simulation '{}'", safe_name));
+    state.telemetry.log(0, "INFO", format!("Создан и запущен новый мир '{}'", safe_name));
     Json(safe_name)
 }
 
@@ -185,6 +187,7 @@ pub struct ConfigUpdatePayload {
     pub mutation_rate: Option<f32>,
     pub food_spawn_rate: Option<f32>,
     pub base_metabolism: Option<f32>,
+    pub enable_pioneer_reseeding: Option<bool>,
 }
 
 async fn config_update_handler(
@@ -201,7 +204,10 @@ async fn config_update_handler(
     if let Some(b) = payload.base_metabolism {
         w.config.base_metabolism = b.clamp(0.005, 0.5);
     }
-    state.telemetry.log(w.tick, "CONFIG", "World logic parameters updated via settings panel".to_string());
+    if let Some(r) = payload.enable_pioneer_reseeding {
+        w.config.enable_pioneer_reseeding = r;
+    }
+    state.telemetry.log(w.tick, "CONFIG", "Параметры мира обновлены".to_string());
     Json("CONFIG_UPDATED")
 }
 
@@ -262,8 +268,30 @@ async fn meat_handler(State(state): State<Arc<AppState>>) -> Json<&'static str> 
 }
 
 async fn reset_handler(State(state): State<Arc<AppState>>) -> Json<&'static str> {
-    let mut w = state.world.write();
-    *w = World::new(SimConfig::default());
-    state.telemetry.log(0, "INFO", "Simulation world reset to baseline state.".to_string());
-    Json("SIMULATION_RESET")
+    let active_name = {
+        let storage = state.storage.read();
+        storage.get_active_name()
+    };
+
+    let (stats, max_gen, dominant_name, loaded_cfg) = {
+        let w = state.world.read();
+        let stats = w.get_stats();
+        let max_gen = stats.max_generation;
+        let spec = SpeciesAnalyzer::classify_population(&w.creatures);
+        let dom = spec.first().map(|s| s.name.clone()).unwrap_or_else(|| "None".to_string());
+        (stats, max_gen, dom, w.config.clone())
+    };
+
+    {
+        let storage = state.storage.write();
+        storage.archive_and_reset(&active_name, &stats, max_gen, &dominant_name);
+    }
+
+    {
+        let mut w = state.world.write();
+        *w = World::new(loaded_cfg);
+    }
+
+    state.telemetry.log(0, "INFO", format!("Симуляция '{}' заархивирована в summary.json и перезапущена с нуля.", active_name));
+    Json("SIMULATION_ARCHIVED_AND_RESET")
 }

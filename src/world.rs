@@ -300,17 +300,16 @@ impl World {
                                 }
                             }
 
-                            // Reproduction
-                            if c_action.mate
+                            // Natural reproduction (courtship & mutual attraction)
+                            if (c_action.mate || self.creatures[j].last_action.mate)
                                 && self.creatures[i].is_fertile()
                                 && self.creatures[j].is_fertile()
-                                && self.creatures[j].last_action.mate
                                 && self.creatures.len() + children_to_spawn.len() < self.config.max_creatures
                             {
                                 let attr_ij = self.creatures[i].calculate_attraction(&self.creatures[j]);
                                 let attr_ji = self.creatures[j].calculate_attraction(&self.creatures[i]);
 
-                                if attr_ij > 0.05 && attr_ji > 0.05 {
+                                if attr_ij > 0.03 && attr_ji > 0.03 {
                                     let clutch = self.creatures[i].phenotype.clutch_size.min(2);
                                     for _ in 0..clutch {
                                         let offset = Vec2::new(
@@ -423,10 +422,16 @@ impl World {
             }
         }
 
-        // 10. Extinction Prevention
-        if self.creatures.len() < self.config.min_creatures {
+        // 10. Extinction & Natural Ecosystem State
+        if self.creatures.is_empty() {
             if let Some(t) = telemetry {
-                t.log(self.tick, "WARN", format!("Population dropped to {}. Re-seeding pioneer organisms.", self.creatures.len()));
+                if self.tick % 240 == 0 {
+                    t.log(self.tick, "FATAL", "Популяция полностью вымерла (естественный коллапс). Нажмите 'Сброс' в меню.".to_string());
+                }
+            }
+        } else if self.config.enable_pioneer_reseeding && self.creatures.len() < self.config.min_creatures {
+            if let Some(t) = telemetry {
+                t.log(self.tick, "WARN", format!("Популяция упала до {}. Подсадка пионеров.", self.creatures.len()));
             }
             for _ in 0..(self.config.min_creatures - self.creatures.len()) {
                 let pos = Vec2::new(

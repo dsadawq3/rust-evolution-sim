@@ -101,7 +101,7 @@
       border-radius: 14px;
       display: flex;
       align-items: center;
-      gap: 14px;
+      gap: 12px;
       box-shadow: 0 10px 35px rgba(0, 0, 0, 0.5);
     }
     .brand-title {
@@ -142,6 +142,16 @@
     .btn-nav.highlight:hover {
       background: #0369a1;
       border-color: #7dd3fc;
+    }
+    .btn-nav.menu-btn {
+      background: #15803d;
+      border-color: #22c55e;
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(34, 197, 94, 0.35);
+    }
+    .btn-nav.menu-btn:hover {
+      background: #166534;
+      border-color: #4ade80;
     }
 
     /* Controls Header */
@@ -334,7 +344,7 @@
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
     .inspector-title { font-size: 16px; font-weight: 800; color: #4ade80; }
-    .close-btn { background: none; border: none; color: #94a3b8; font-size: 22px; cursor: pointer; line-height: 1; }
+    .close-btn { background: none; border: none; color: #94a3b8; font-size: 24px; cursor: pointer; line-height: 1; }
     .close-btn:hover { color: #fff; }
 
     .progress-bar { height: 8px; background: #334155; border-radius: 4px; overflow: hidden; margin-top: 4px; }
@@ -392,16 +402,16 @@
     }
     .ticker-msg { color: #cbd5e1; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; }
 
-    /* Modals */
+    /* Modals & Fullscreen Menus */
     .modal-overlay {
       position: fixed;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.75);
-      backdrop-filter: blur(10px);
-      z-index: 999;
+      background: rgba(8, 12, 18, 0.85);
+      backdrop-filter: blur(12px);
+      z-index: 1000;
       display: none;
       align-items: center;
       justify-content: center;
@@ -410,15 +420,15 @@
       background: #141b26;
       border: 1px solid rgba(255, 255, 255, 0.16);
       border-radius: 20px;
-      width: 640px;
-      max-width: 92vw;
-      max-height: 88vh;
-      padding: 26px;
+      width: 700px;
+      max-width: 94vw;
+      max-height: 90vh;
+      padding: 28px;
       overflow-y: auto;
-      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.85);
+      box-shadow: 0 24px 75px rgba(0, 0, 0, 0.9);
     }
     .modal-box h2 {
-      font-size: 18px;
+      font-size: 20px;
       font-weight: 800;
       margin-bottom: 20px;
       color: #4ade80;
@@ -459,7 +469,7 @@
       accent-color: #4ade80;
     }
     .slider-val { font-weight: 800; color: #4ade80; font-size: 14px; }
-    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
 
     /* Sim Card Item */
     .sim-card {
@@ -477,6 +487,57 @@
     .sim-card.active { border-color: #4ade80; background: rgba(74, 222, 128, 0.08); }
     .sim-name { font-weight: 800; font-size: 15px; color: #f8fafc; }
     .sim-meta { font-size: 12px; color: #94a3b8; margin-top: 4px; }
+
+    /* Launcher Hero Banner */
+    .launcher-header {
+      text-align: center;
+      margin-bottom: 24px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .launcher-title {
+      font-size: 24px;
+      font-weight: 900;
+      color: #4ade80;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    .launcher-desc {
+      font-size: 13px;
+      color: #94a3b8;
+      margin-top: 6px;
+    }
+    .launcher-nav {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      background: #0b0f17;
+      padding: 6px;
+      border-radius: 12px;
+    }
+    .launcher-nav-btn {
+      flex: 1;
+      padding: 10px 14px;
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-size: 14px;
+      font-weight: 700;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .launcher-nav-btn:hover {
+      color: #fff;
+    }
+    .launcher-nav-btn.active {
+      background: #1e293b;
+      color: #4ade80;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
   </style>
 </head>
 <body>
@@ -485,7 +546,7 @@
     <div class="shield-box">
       <div class="spinner"></div>
       <h3 style="margin-bottom: 10px; color: #f8fafc; font-size: 18px; font-weight: 800;">Подключение к Rust Engine...</h3>
-      <p style="font-size: 13px; color: #94a3b8; line-height: 1.5;">Ожидание веб-сокета ядра симулятора (ws://127.0.0.1:7890/ws). Интерфейс защищен от рассинхронизации.</p>
+      <p style="font-size: 13px; color: #94a3b8; line-height: 1.5;">Ожидание веб-сокета ядра симулятора (ws://127.0.0.1:7890/ws). Интерфейс защищен от сбоев.</p>
     </div>
   </div>
 
@@ -494,9 +555,10 @@
   <!-- Top Bar -->
   <div class="hud top-bar">
     <div class="brand-card interactive">
+      <button class="btn-nav menu-btn" id="btn-open-launcher">🎮 Главное Меню</button>
       <div class="brand-title">🧬 BLOB EVO SIM</div>
-      <button class="btn-nav highlight" id="btn-open-sim-hub">🌍 Миры & Симуляции</button>
-      <button class="btn-nav" id="btn-open-settings">⚙️ Графика & Логика</button>
+      <button class="btn-nav highlight" id="btn-open-sim-hub">🌍 Миры</button>
+      <button class="btn-nav" id="btn-open-settings">⚙️ Настройки</button>
       <span style="font-size: 13px; color: #94a3b8;">Мир: <b id="active-sim-badge" style="color:#4ade80;">default</b></span>
     </div>
 
@@ -512,7 +574,7 @@
       <button class="btn" id="btn-meat">🥩 +Мясо</button>
       <button class="btn special" id="btn-radiation">☢️ Мутации</button>
       <button class="btn danger" id="btn-meteor">☄️ Метеорит</button>
-      <button class="btn" id="btn-reset">🔄 Сброс</button>
+      <button class="btn" id="btn-open-reset-confirm" style="border-color: rgba(244,63,94,0.4); color: #fda4af;">🔄 Сброс...</button>
     </div>
   </div>
 
@@ -614,98 +676,132 @@
     <div class="ticker-msg" id="ticker-msg">Подключение к симулятору эволюции...</div>
   </div>
 
-  <!-- MODAL 1: Simulation Hub (List & Create) -->
-  <div class="modal-overlay" id="modal-sim-hub">
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- MODAL 0: STARTUP & MAIN LAUNCHER MENU                           -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="modal-launcher">
     <div class="modal-box">
-      <h2>
-        <span>🌍 Миры и Симуляции</span>
-        <button class="close-btn" id="btn-close-sim-hub">×</button>
-      </h2>
-
-      <div class="tabs-header" style="margin-bottom: 16px; border-radius: 10px; overflow: hidden;">
-        <button class="tab-btn active" id="tab-btn-sim-list">Сохраненные миры</button>
-        <button class="tab-btn" id="tab-btn-sim-create">+ Создать новый мир</button>
+      <div class="launcher-header">
+        <div class="launcher-title">🧬 СИМУЛЯТОР ЭВОЛЮЦИИ 3D</div>
+        <div class="launcher-desc">Rust Engine 2.0 • Диплоидная генетика • CTRNN нейросети • Честная природа</div>
       </div>
 
-      <!-- Sim List -->
-      <div id="sim-list-view">
-        <div id="sim-cards-container"></div>
+      <div class="launcher-nav">
+        <button class="launcher-nav-btn active" id="btn-launch-tab-worlds">🌍 Миры и Запуск</button>
+        <button class="launcher-nav-btn" id="btn-launch-tab-graphics">🎮 Графика 3D</button>
+        <button class="launcher-nav-btn" id="btn-launch-tab-logic">🔬 Логика Экосистемы</button>
       </div>
 
-      <!-- Sim Create Form -->
-      <div id="sim-create-view" style="display: none;">
+      <!-- Tab 1: Worlds & New Run -->
+      <div id="launch-view-worlds">
+        <div class="tabs-header" style="margin-bottom: 16px; border-radius: 10px; overflow: hidden;">
+          <button class="tab-btn active" id="tab-launch-existing">Выбрать сохраненный мир</button>
+          <button class="tab-btn" id="tab-launch-new">+ Создать новый мир</button>
+        </div>
+
+        <!-- Saved Worlds List -->
+        <div id="launch-existing-list">
+          <div id="launcher-sim-cards"></div>
+        </div>
+
+        <!-- New World Form -->
+        <div id="launch-new-form" style="display: none;">
+          <div class="form-group">
+            <label><span>Папка / Название мира:</span></label>
+            <input type="text" id="launcher-sim-name" value="world_nature" placeholder="например, darwin_island">
+          </div>
+          <div class="form-group">
+            <label><span>Стартовая популяция блёбов:</span> <span class="slider-val" id="val-launch-pop">160</span></label>
+            <input type="range" id="launcher-sim-pop" min="20" max="500" value="160">
+          </div>
+          <div class="form-group">
+            <label><span>Количество растений на старте:</span> <span class="slider-val" id="val-launch-food">450</span></label>
+            <input type="range" id="launcher-sim-food" min="50" max="1500" value="450">
+          </div>
+          <div class="form-group">
+            <label><span>Размер арены мира:</span> <span class="slider-val" id="val-launch-size">280</span></label>
+            <input type="range" id="launcher-sim-size" min="150" max="600" value="280">
+          </div>
+          <div class="form-group">
+            <label><span>Множитель мутаций генома:</span> <span class="slider-val" id="val-launch-mut">1.0x</span></label>
+            <input type="range" id="launcher-sim-mut" min="0.2" max="6.0" step="0.2" value="1.0">
+          </div>
+          <div class="form-group">
+            <label><span>Режим выживания (Честная природа):</span></label>
+            <select id="launcher-sim-reseed">
+              <option value="false" selected>Честная природа: Без читов (при вымирании популяция гибнет)</option>
+              <option value="true">С подсадкой пионеров (спасение при падении ниже 25)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 2: Graphics -->
+      <div id="launch-view-graphics" style="display: none;">
         <div class="form-group">
-          <label><span>Имя симуляции (папка сохранения):</span></label>
-          <input type="text" id="new-sim-name" value="world_carnivores" placeholder="например, carnivore_arena">
+          <label><span>Профиль качества 3D:</span></label>
+          <select id="launcher-gfx-preset">
+            <option value="ultra">Ультра (Мягкие тени + 60 FPS)</option>
+            <option value="medium" selected>Средний (Оптимальный)</option>
+            <option value="low">Низкий (Максимальный FPS на слабых ПК)</option>
+          </select>
         </div>
         <div class="form-group">
-          <label><span>Стартовая популяция блёбов:</span> <span class="slider-val" id="val-new-pop">160</span></label>
-          <input type="range" id="new-sim-pop" min="20" max="500" value="160">
+          <label><span>Динамические тени:</span></label>
+          <select id="launcher-gfx-shadows">
+            <option value="on" selected>Включены (Красивый мягкий свет)</option>
+            <option value="off">Выключены (Экономия GPU)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Tab 3: World Logic -->
+      <div id="launch-view-logic" style="display: none;">
+        <div class="form-group">
+          <label><span>Скорость появления еды (растений / сек):</span> <span class="slider-val" id="val-launch-food-rate">25.0</span></label>
+          <input type="range" id="launcher-logic-food" min="2.0" max="80.0" step="1.0" value="25.0">
         </div>
         <div class="form-group">
-          <label><span>Количество еды на старте:</span> <span class="slider-val" id="val-new-food">450</span></label>
-          <input type="range" id="new-sim-food" min="50" max="1500" value="450">
+          <label><span>Базовый расход энергии (метаболизм):</span> <span class="slider-val" id="val-launch-meta">0.030</span></label>
+          <input type="range" id="launcher-logic-meta" min="0.010" max="0.100" step="0.005" value="0.030">
         </div>
         <div class="form-group">
-          <label><span>Размер арены мира:</span> <span class="slider-val" id="val-new-size">300</span></label>
-          <input type="range" id="new-sim-size" min="150" max="600" value="300">
+          <label><span>Подсадка пионеров при вымирании:</span></label>
+          <select id="launcher-reseed-toggle">
+            <option value="false" selected>Выключена (Честная биология)</option>
+            <option value="true">Включена (Искусственное поддержание 25 особей)</option>
+          </select>
         </div>
-        <div class="form-group">
-          <label><span>Множитель мутаций генома:</span> <span class="slider-val" id="val-new-mut">1.0x</span></label>
-          <input type="range" id="new-sim-mut" min="0.2" max="6.0" step="0.2" value="1.0">
-        </div>
-        <div class="modal-actions">
-          <button class="btn active" id="btn-submit-new-sim" style="padding: 10px 22px; font-size: 14px;">🚀 Запустить новый мир</button>
-        </div>
+      </div>
+
+      <div class="modal-actions" style="margin-top: 28px;">
+        <button class="btn active" id="btn-launcher-enter" style="padding: 12px 28px; font-size: 15px; font-weight: 800;">
+          ▶ ВОЙТИ В СИМУЛЯЦИЮ
+        </button>
       </div>
     </div>
   </div>
 
-  <!-- MODAL 2: Settings (Graphics & Live World Logic) -->
-  <div class="modal-overlay" id="modal-settings">
-    <div class="modal-box">
-      <h2>
-        <span>⚙️ Графика и Логика Мира</span>
-        <button class="close-btn" id="btn-close-settings">×</button>
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- MODAL 1: SAFE RESET CONFIRMATION                                -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="modal-confirm-reset">
+    <div class="modal-box" style="width: 520px;">
+      <h2 style="color: #f87171;">
+        <span>⚠️ Подтверждение сброса мира</span>
+        <button class="close-btn" id="btn-cancel-reset-x">×</button>
       </h2>
-
-      <!-- Graphics Section -->
-      <div style="font-size: 14px; font-weight: 800; color: #38bdf8; margin-bottom: 12px;">🎮 Настройки Графики 3D</div>
-      <div class="form-group">
-        <label><span>Профиль качества:</span></label>
-        <select id="gfx-preset">
-          <option value="ultra">Ультра (Мягкие тени + Свет + 60 FPS)</option>
-          <option value="medium" selected>Средний (Оптимальный)</option>
-          <option value="low">Низкий (Максимальный FPS)</option>
-        </select>
+      <div style="font-size: 14px; line-height: 1.6; color: #cbd5e1; margin-bottom: 20px;">
+        Вы действительно хотите сбросить текущую симуляцию <b id="reset-sim-target" style="color:#4ade80;">default</b>?
+        <div style="background: #0b0f17; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 14px; margin-top: 12px; font-size: 13px;">
+          • Детальные логи (<code style="color:#38bdf8;">history.jsonl</code> и <code style="color:#38bdf8;">events.log</code>) будут очищены для чистого забега.<br>
+          • <b>Краткая сводка забега</b> (прожитые тики, пик популяции, число поколений) сохранится в <code style="color:#4ade80;">summary.json</code> и архиве.<br>
+          • Мир вернется к стартовой популяции.
+        </div>
       </div>
-      <div class="form-group">
-        <label><span>Динамические тени:</span></label>
-        <select id="gfx-shadows">
-          <option value="on" selected>Включены (Высокое качество)</option>
-          <option value="off">Выключены (Экономия GPU)</option>
-        </select>
-      </div>
-
-      <div style="width: 100%; height: 1px; background: rgba(255,255,255,0.1); margin: 20px 0;"></div>
-
-      <!-- Logic Section -->
-      <div style="font-size: 14px; font-weight: 800; color: #4ade80; margin-bottom: 12px;">🔬 Параметры Логики Симуляции (В реальном времени)</div>
-      <div class="form-group">
-        <label><span>Скорость спавна еды (растений / сек):</span> <span class="slider-val" id="val-logic-food">2.5</span></label>
-        <input type="range" id="logic-food-rate" min="0.2" max="10.0" step="0.1" value="2.5">
-      </div>
-      <div class="form-group">
-        <label><span>Частота мутаций ДНК:</span> <span class="slider-val" id="val-logic-mut">1.0x</span></label>
-        <input type="range" id="logic-mut-rate" min="0.1" max="5.0" step="0.1" value="1.0">
-      </div>
-      <div class="form-group">
-        <label><span>Базовый метаболизм (трата энергии):</span> <span class="slider-val" id="val-logic-meta">0.05</span></label>
-        <input type="range" id="logic-meta-rate" min="0.01" max="0.25" step="0.01" value="0.05">
-      </div>
-
       <div class="modal-actions">
-        <button class="btn active" id="btn-apply-logic" style="padding: 10px 22px; font-size: 14px;">💾 Применить в ядро Rust</button>
+        <button class="btn" id="btn-cancel-reset" style="padding: 9px 18px;">❌ Отмена</button>
+        <button class="btn danger" id="btn-do-reset" style="padding: 9px 20px; font-weight: 800;">🗑️ Подтвердить и стереть</button>
       </div>
     </div>
   </div>
@@ -833,11 +929,11 @@
     }
 
     // --- UI TABS ---
-    document.querySelectorAll('.tab-btn').forEach(btn => {
+    document.querySelectorAll('.drawer-panel .tab-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         if (!btn.getAttribute('data-tab')) return;
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.querySelectorAll('.drawer-panel .tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.drawer-panel .tab-content').forEach(c => c.classList.remove('active'));
         btn.classList.add('active');
         document.getElementById(btn.getAttribute('data-tab')).classList.add('active');
       });
@@ -849,7 +945,6 @@
     let lastChartTick = 0;
     let isSyncingHistory = false;
 
-    // Common chart options
     const defaultScales = {
       x: {
         grid: { color: 'rgba(255,255,255,0.04)' },
@@ -926,7 +1021,6 @@
     const chartJaw = makeTraitChart('chart-jaw', 'Сила челюсти', '#f87171');
     const chartSize = makeTraitChart('chart-size', 'Средний радиус', '#60a5fa');
 
-    // Safe History Sync Function (Atomically populates all charts without race conditions)
     async function syncHistory(simName) {
       if (isSyncingHistory) return;
       isSyncingHistory = true;
@@ -979,13 +1073,11 @@
           chartJaw.update('none');
           chartSize.update('none');
         } else {
-          // Empty or fresh world
           resetAllCharts();
           lastChartTick = 0;
         }
         document.getElementById('chart-pop-status').innerText = 'В реальном времени';
       } catch (err) {
-        console.warn('Failed to sync history:', err);
         document.getElementById('chart-pop-status').innerText = 'Ожидание данных...';
       } finally {
         isSyncingHistory = false;
@@ -1072,11 +1164,9 @@
     let followCamera = false;
 
     function renderSnapshot(s) {
-      // Check simulation switch from backend
       if (s.active_sim && s.active_sim !== currentSimName) {
         currentSimName = s.active_sim;
         document.getElementById('active-sim-badge').innerText = s.active_sim;
-        // Clean old meshes from scene
         creatureMeshes.forEach(mesh => scene.remove(mesh));
         creatureMeshes.clear();
         selectedCreatureId = null;
@@ -1086,7 +1176,6 @@
         return;
       }
 
-      // Check world reset
       if (s.tick < lastChartTick) {
         resetAllCharts();
       }
@@ -1106,7 +1195,7 @@
       document.getElementById('stat-energy').innerText = `${Math.round(s.stats.total_energy_pool)} kcal`;
       document.getElementById('active-sim-badge').innerText = s.active_sim;
 
-      // Update Charts smoothly (every >= 25 ticks, independent of time scale)
+      // Update Charts smoothly
       if (!isSyncingHistory && (s.tick >= lastChartTick + 25 || lastChartTick === 0)) {
         appendChartPoint(
           s.tick,
@@ -1166,7 +1255,7 @@
         }
       });
 
-      // Update Food Instancing
+      // Food Instancing
       foodInstanced.count = Math.min(s.food.length, 1600);
       for (let i = 0; i < foodInstanced.count; i++) {
         dummy.position.set(s.food[i][0], 0.25, s.food[i][1]);
@@ -1176,7 +1265,7 @@
       }
       foodInstanced.instanceMatrix.needsUpdate = true;
 
-      // Update Meat Instancing (Salmon-pink Domes)
+      // Meat Instancing
       meatInstanced.count = Math.min(s.meat.length, 800);
       for (let i = 0; i < meatInstanced.count; i++) {
         const [mx, my, mr, nrg] = s.meat[i];
@@ -1323,40 +1412,92 @@
     document.getElementById('btn-meat').addEventListener('click', () => fetch('/api/action/meat', { method: 'POST' }));
     document.getElementById('btn-radiation').addEventListener('click', () => fetch('/api/action/radiation', { method: 'POST' }));
     document.getElementById('btn-meteor').addEventListener('click', () => fetch('/api/action/meteor', { method: 'POST' }));
-    document.getElementById('btn-reset').addEventListener('click', () => {
-      fetch('/api/action/reset', { method: 'POST' });
+
+    // --- MODAL 1: SAFE RESET CONFIRMATION ---
+    const modalReset = document.getElementById('modal-confirm-reset');
+    document.getElementById('btn-open-reset-confirm').addEventListener('click', () => {
+      document.getElementById('reset-sim-target').innerText = currentSimName;
+      modalReset.style.display = 'flex';
+    });
+    document.getElementById('btn-cancel-reset').addEventListener('click', () => modalReset.style.display = 'none');
+    document.getElementById('btn-cancel-reset-x').addEventListener('click', () => modalReset.style.display = 'none');
+
+    document.getElementById('btn-do-reset').addEventListener('click', async () => {
+      modalReset.style.display = 'none';
+      await fetch('/api/action/reset', { method: 'POST' });
       resetAllCharts();
+      syncHistory(currentSimName);
     });
 
-    // --- MODAL 1: SIMULATION HUB ---
-    const modalHub = document.getElementById('modal-sim-hub');
+    // ═══════════════════════════════════════════════════════════════
+    // LAUNCHER & MAIN MENU LOGIC
+    // ═══════════════════════════════════════════════════════════════
+    const modalLauncher = document.getElementById('modal-launcher');
+
+    // Open launcher on startup if not yet dismissed
+    if (!sessionStorage.getItem('launcher_seen')) {
+      openLauncher();
+      sessionStorage.setItem('launcher_seen', 'true');
+    }
+
+    document.getElementById('btn-open-launcher').addEventListener('click', openLauncher);
     document.getElementById('btn-open-sim-hub').addEventListener('click', () => {
-      loadSimList();
-      modalHub.style.display = 'flex';
+      openLauncher();
+      switchLauncherTab('worlds');
     });
-    document.getElementById('btn-close-sim-hub').addEventListener('click', () => modalHub.style.display = 'none');
-
-    document.getElementById('tab-btn-sim-list').addEventListener('click', () => {
-      document.getElementById('tab-btn-sim-list').classList.add('active');
-      document.getElementById('tab-btn-sim-create').classList.remove('active');
-      document.getElementById('sim-list-view').style.display = 'block';
-      document.getElementById('sim-create-view').style.display = 'none';
-      loadSimList();
+    document.getElementById('btn-open-settings').addEventListener('click', () => {
+      openLauncher();
+      switchLauncherTab('logic');
     });
 
-    document.getElementById('tab-btn-sim-create').addEventListener('click', () => {
-      document.getElementById('tab-btn-sim-create').classList.add('active');
-      document.getElementById('tab-btn-sim-list').classList.remove('active');
-      document.getElementById('sim-create-view').style.display = 'block';
-      document.getElementById('sim-list-view').style.display = 'none';
+    function openLauncher() {
+      loadLauncherSimList();
+      modalLauncher.style.display = 'flex';
+    }
+
+    function switchLauncherTab(tab) {
+      document.querySelectorAll('.launcher-nav-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('launch-view-worlds').style.display = 'none';
+      document.getElementById('launch-view-graphics').style.display = 'none';
+      document.getElementById('launch-view-logic').style.display = 'none';
+
+      if (tab === 'worlds') {
+        document.getElementById('btn-launch-tab-worlds').classList.add('active');
+        document.getElementById('launch-view-worlds').style.display = 'block';
+      } else if (tab === 'graphics') {
+        document.getElementById('btn-launch-tab-graphics').classList.add('active');
+        document.getElementById('launch-view-graphics').style.display = 'block';
+      } else if (tab === 'logic') {
+        document.getElementById('btn-launch-tab-logic').classList.add('active');
+        document.getElementById('launch-view-logic').style.display = 'block';
+      }
+    }
+
+    document.getElementById('btn-launch-tab-worlds').addEventListener('click', () => switchLauncherTab('worlds'));
+    document.getElementById('btn-launch-tab-graphics').addEventListener('click', () => switchLauncherTab('graphics'));
+    document.getElementById('btn-launch-tab-logic').addEventListener('click', () => switchLauncherTab('logic'));
+
+    document.getElementById('tab-launch-existing').addEventListener('click', () => {
+      document.getElementById('tab-launch-existing').classList.add('active');
+      document.getElementById('tab-launch-new').classList.remove('active');
+      document.getElementById('launch-existing-list').style.display = 'block';
+      document.getElementById('launch-new-form').style.display = 'none';
+      loadLauncherSimList();
     });
 
-    async function loadSimList() {
+    document.getElementById('tab-launch-new').addEventListener('click', () => {
+      document.getElementById('tab-launch-new').classList.add('active');
+      document.getElementById('tab-launch-existing').classList.remove('active');
+      document.getElementById('launch-new-form').style.display = 'block';
+      document.getElementById('launch-existing-list').style.display = 'none';
+    });
+
+    async function loadLauncherSimList() {
       try {
         const res = await fetch('/api/simulations');
         const list = await res.json();
         const activeName = document.getElementById('active-sim-badge').innerText;
-        const container = document.getElementById('sim-cards-container');
+        const container = document.getElementById('launcher-sim-cards');
         container.innerHTML = '';
 
         list.forEach(item => {
@@ -1369,94 +1510,86 @@
               <div class="sim-meta">Тик: ${item.last_tick} • Рождений: ${item.total_births} • Смертей: ${item.total_deaths}</div>
             </div>
             <div>
-              ${!isActive ? `<button class="btn active btn-switch-sim" data-sim="${item.name}">Войти</button>` : ''}
+              ${!isActive ? `<button class="btn active btn-launcher-switch" data-sim="${item.name}">Выбрать</button>` : '<span style="color:#4ade80;font-weight:700;">✓ Загружен</span>'}
             </div>
           `;
           container.appendChild(card);
         });
 
-        document.querySelectorAll('.btn-switch-sim').forEach(btn => {
+        document.querySelectorAll('.btn-launcher-switch').forEach(btn => {
           btn.addEventListener('click', async (e) => {
             const name = e.target.getAttribute('data-sim');
             await fetch(`/api/simulations/switch/${name}`, { method: 'POST' });
-            modalHub.style.display = 'none';
             currentSimName = name;
+            document.getElementById('active-sim-badge').innerText = name;
             resetAllCharts();
             syncHistory(name);
+            loadLauncherSimList();
           });
         });
       } catch (e) {}
     }
 
-    // Sliders sync for Create Sim
+    // Sliders sync in launcher
     const bindSlider = (sliderId, valId, suffix = '') => {
       const s = document.getElementById(sliderId);
       const v = document.getElementById(valId);
       s.addEventListener('input', () => v.innerText = s.value + suffix);
     };
-    bindSlider('new-sim-pop', 'val-new-pop');
-    bindSlider('new-sim-food', 'val-new-food');
-    bindSlider('new-sim-size', 'val-new-size');
-    bindSlider('new-sim-mut', 'val-new-mut', 'x');
+    bindSlider('launcher-sim-pop', 'val-launch-pop');
+    bindSlider('launcher-sim-food', 'val-launch-food');
+    bindSlider('launcher-sim-size', 'val-launch-size');
+    bindSlider('launcher-sim-mut', 'val-launch-mut', 'x');
+    bindSlider('launcher-logic-food', 'val-launch-food-rate');
+    bindSlider('launcher-logic-meta', 'val-launch-meta');
 
-    document.getElementById('btn-submit-new-sim').addEventListener('click', async () => {
-      const name = document.getElementById('new-sim-name').value;
-      const creatures = parseInt(document.getElementById('new-sim-pop').value);
-      const food = parseInt(document.getElementById('new-sim-food').value);
-      const world_size = parseFloat(document.getElementById('new-sim-size').value);
-      const mutation_rate = parseFloat(document.getElementById('new-sim-mut').value);
+    // Launch / Enter button handler
+    document.getElementById('btn-launcher-enter').addEventListener('click', async () => {
+      // Check if user is on the "Create New World" tab
+      const isCreatingNew = document.getElementById('tab-launch-new').classList.contains('active');
 
-      await fetch('/api/simulations/new', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, creatures, food, world_size, mutation_rate })
-      });
-      modalHub.style.display = 'none';
-      currentSimName = name;
-      resetAllCharts();
-      syncHistory(name);
-    });
+      if (isCreatingNew) {
+        const name = document.getElementById('launcher-sim-name').value;
+        const creatures = parseInt(document.getElementById('launcher-sim-pop').value);
+        const food = parseInt(document.getElementById('launcher-sim-food').value);
+        const world_size = parseFloat(document.getElementById('launcher-sim-size').value);
+        const mutation_rate = parseFloat(document.getElementById('launcher-sim-mut').value);
+        const enable_pioneer_reseeding = document.getElementById('launcher-sim-reseed').value === 'true';
 
-    // --- MODAL 2: SETTINGS (GRAPHICS & WORLD LOGIC) ---
-    const modalSettings = document.getElementById('modal-settings');
-    document.getElementById('btn-open-settings').addEventListener('click', () => modalSettings.style.display = 'flex');
-    document.getElementById('btn-close-settings').addEventListener('click', () => modalSettings.style.display = 'none');
+        await fetch('/api/simulations/new', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, creatures, food, world_size, mutation_rate, enable_pioneer_reseeding })
+        });
+        currentSimName = name;
+        document.getElementById('active-sim-badge').innerText = name;
+        resetAllCharts();
+        syncHistory(name);
+      } else {
+        // Apply logic updates if any
+        const food_spawn_rate = parseFloat(document.getElementById('launcher-logic-food').value);
+        const base_metabolism = parseFloat(document.getElementById('launcher-logic-meta').value);
+        const enable_pioneer_reseeding = document.getElementById('launcher-reseed-toggle').value === 'true';
 
-    bindSlider('logic-food-rate', 'val-logic-food');
-    bindSlider('logic-mut-rate', 'val-logic-mut', 'x');
-    bindSlider('logic-meta-rate', 'val-logic-meta');
+        await fetch('/api/config/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ food_spawn_rate, base_metabolism, enable_pioneer_reseeding })
+        });
+      }
 
-    document.getElementById('btn-apply-logic').addEventListener('click', async () => {
-      const food_spawn_rate = parseFloat(document.getElementById('logic-food-rate').value);
-      const mutation_rate = parseFloat(document.getElementById('logic-mut-rate').value);
-      const base_metabolism = parseFloat(document.getElementById('logic-meta-rate').value);
-
-      await fetch('/api/config/update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ food_spawn_rate, mutation_rate, base_metabolism })
-      });
-      modalSettings.style.display = 'none';
-    });
-
-    // Graphics Preset Change
-    document.getElementById('gfx-preset').addEventListener('change', (e) => {
-      const val = e.target.value;
-      if (val === 'low') {
+      // Apply graphics settings
+      const gfx = document.getElementById('launcher-gfx-preset').value;
+      const shadows = document.getElementById('launcher-gfx-shadows').value === 'on';
+      if (gfx === 'low') {
         renderer.shadowMap.enabled = false;
         dirLight.castShadow = false;
-        document.getElementById('gfx-shadows').value = 'off';
       } else {
-        renderer.shadowMap.enabled = true;
-        dirLight.castShadow = true;
-        document.getElementById('gfx-shadows').value = 'on';
+        renderer.shadowMap.enabled = shadows;
+        dirLight.castShadow = shadows;
       }
-    });
 
-    document.getElementById('gfx-shadows').addEventListener('change', (e) => {
-      const on = e.target.value === 'on';
-      renderer.shadowMap.enabled = on;
-      dirLight.castShadow = on;
+      modalLauncher.style.display = 'none';
     });
 
     // --- ANIMATION LOOP ---

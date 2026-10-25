@@ -27,8 +27,9 @@ pub struct SimConfig {
     pub bite_cost: f32,
     pub min_reproduction_energy: f32,
 
-    // Environmental / Disasters
+    // Environmental / Genetics / Nature settings
     pub mutation_rate_multiplier: f32,
+    pub enable_pioneer_reseeding: bool,
     pub time_scale: f32,
     pub is_paused: bool,
     pub ticks_per_sec: u32,
@@ -53,7 +54,7 @@ impl Default for SimConfig {
             food_energy: 40.0,
             meat_energy_ratio: 0.85,
             meat_decay_rate: 0.003,
-            base_metabolism: 0.035,
+            base_metabolism: 0.030,
             movement_energy_cost: 0.02,
             eye_maintenance_cost: 0.008,
             armor_maintenance_cost: 0.015,
@@ -61,6 +62,7 @@ impl Default for SimConfig {
             min_reproduction_energy: 70.0,
 
             mutation_rate_multiplier: 1.0,
+            enable_pioneer_reseeding: false, // Честная природа по умолчанию (без читов и магии)
             time_scale: 1.0,
             is_paused: false,
             ticks_per_sec: 40,
