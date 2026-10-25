@@ -33,11 +33,13 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route("/ws", get(ws_handler))
         .route("/api/stats", get(stats_handler))
         .route("/api/history", get(history_handler))
+        .route("/api/timeline", get(timeline_handler))
         .route("/api/species", get(species_handler))
         .route("/api/events", get(events_handler))
         .route("/api/simulations", get(simulations_list_handler))
         .route("/api/simulations/new", post(new_simulation_handler))
         .route("/api/simulations/switch/:name", post(switch_simulation_handler))
+        .route("/api/config/current", get(current_config_handler))
         .route("/api/config/update", post(config_update_handler))
         .route("/api/creature/:id", get(creature_detail_handler))
         .route("/api/speed", post(speed_handler))
@@ -105,6 +107,17 @@ async fn history_handler(State(state): State<Arc<AppState>>) -> Json<Vec<Detaile
     let active_name = storage.get_active_name();
     let recent = storage.read_recent_history(&active_name, 100);
     Json(recent)
+}
+
+async fn timeline_handler(State(state): State<Arc<AppState>>) -> Json<Option<crate::storage::ChartTimelineData>> {
+    let storage = state.storage.read();
+    let active_name = storage.get_active_name();
+    Json(storage.get_timeline(&active_name))
+}
+
+async fn current_config_handler(State(state): State<Arc<AppState>>) -> Json<SimConfig> {
+    let w = state.world.read();
+    Json(w.config.clone())
 }
 
 async fn species_handler(State(state): State<Arc<AppState>>) -> Json<Vec<SpeciesInfo>> {

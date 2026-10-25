@@ -133,16 +133,6 @@
       border-color: #64748b;
       transform: translateY(-1px);
     }
-    .btn-nav.highlight {
-      background: #0284c7;
-      border-color: #38bdf8;
-      color: #ffffff;
-      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4);
-    }
-    .btn-nav.highlight:hover {
-      background: #0369a1;
-      border-color: #7dd3fc;
-    }
     .btn-nav.menu-btn {
       background: #15803d;
       border-color: #22c55e;
@@ -420,12 +410,13 @@
       background: #141b26;
       border: 1px solid rgba(255, 255, 255, 0.16);
       border-radius: 20px;
-      width: 700px;
+      width: 720px;
       max-width: 94vw;
       max-height: 90vh;
       padding: 28px;
       overflow-y: auto;
       box-shadow: 0 24px 75px rgba(0, 0, 0, 0.9);
+      position: relative;
     }
     .modal-box h2 {
       font-size: 20px;
@@ -488,55 +479,19 @@
     .sim-name { font-weight: 800; font-size: 15px; color: #f8fafc; }
     .sim-meta { font-size: 12px; color: #94a3b8; margin-top: 4px; }
 
-    /* Launcher Hero Banner */
-    .launcher-header {
-      text-align: center;
-      margin-bottom: 24px;
-      padding-bottom: 18px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    }
-    .launcher-title {
-      font-size: 24px;
-      font-weight: 900;
-      color: #4ade80;
-      letter-spacing: 0.5px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-    }
-    .launcher-desc {
-      font-size: 13px;
-      color: #94a3b8;
-      margin-top: 6px;
-    }
-    .launcher-nav {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 20px;
-      background: #0b0f17;
-      padding: 6px;
-      border-radius: 12px;
-    }
-    .launcher-nav-btn {
-      flex: 1;
-      padding: 10px 14px;
-      background: transparent;
-      border: none;
-      color: #94a3b8;
-      font-size: 14px;
-      font-weight: 700;
+    .btn-return {
+      background: #334155;
+      border: 1px solid #475569;
+      color: #fff;
+      padding: 8px 16px;
       border-radius: 8px;
       cursor: pointer;
+      font-size: 13px;
+      font-weight: 700;
       transition: all 0.15s ease;
     }
-    .launcher-nav-btn:hover {
-      color: #fff;
-    }
-    .launcher-nav-btn.active {
-      background: #1e293b;
-      color: #4ade80;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    .btn-return:hover {
+      background: #475569;
     }
   </style>
 </head>
@@ -555,10 +510,10 @@
   <!-- Top Bar -->
   <div class="hud top-bar">
     <div class="brand-card interactive">
-      <button class="btn-nav menu-btn" id="btn-open-launcher">🎮 Главное Меню</button>
+      <button class="btn-nav menu-btn" id="btn-open-launcher">🏠 Главное Меню</button>
       <div class="brand-title">🧬 BLOB EVO SIM</div>
-      <button class="btn-nav highlight" id="btn-open-sim-hub">🌍 Миры</button>
-      <button class="btn-nav" id="btn-open-settings">⚙️ Настройки</button>
+      <button class="btn-nav" id="btn-open-world-config">⚙️ Настройки этого мира</button>
+      <button class="btn-nav" id="btn-open-graphics">🎮 Графика 3D</button>
       <span style="font-size: 13px; color: #94a3b8;">Мир: <b id="active-sim-badge" style="color:#4ade80;">default</b></span>
     </div>
 
@@ -677,113 +632,144 @@
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════ -->
-  <!-- MODAL 0: STARTUP & MAIN LAUNCHER MENU                           -->
+  <!-- MODAL 0: MAIN LAUNCHER / WORLDS HUB                             -->
   <!-- ═══════════════════════════════════════════════════════════════ -->
   <div class="modal-overlay" id="modal-launcher">
     <div class="modal-box">
-      <div class="launcher-header">
-        <div class="launcher-title">🧬 СИМУЛЯТОР ЭВОЛЮЦИИ 3D</div>
-        <div class="launcher-desc">Rust Engine 2.0 • Диплоидная генетика • CTRNN нейросети • Честная природа</div>
+      <h2>
+        <span>🌍 Хаб Миров и Запуск</span>
+        <button class="btn-return" id="btn-launcher-exit">✖ В симуляцию (Esc)</button>
+      </h2>
+
+      <div class="tabs-header" style="margin-bottom: 20px; border-radius: 10px; overflow: hidden;">
+        <button class="tab-btn active" id="tab-launch-existing">Сохраненные миры</button>
+        <button class="tab-btn" id="tab-launch-new">+ Создать новый мир</button>
       </div>
 
-      <div class="launcher-nav">
-        <button class="launcher-nav-btn active" id="btn-launch-tab-worlds">🌍 Миры и Запуск</button>
-        <button class="launcher-nav-btn" id="btn-launch-tab-graphics">🎮 Графика 3D</button>
-        <button class="launcher-nav-btn" id="btn-launch-tab-logic">🔬 Логика Экосистемы</button>
+      <!-- Tab 1: Saved Worlds List -->
+      <div id="launch-existing-list">
+        <div id="launcher-sim-cards"></div>
       </div>
 
-      <!-- Tab 1: Worlds & New Run -->
-      <div id="launch-view-worlds">
-        <div class="tabs-header" style="margin-bottom: 16px; border-radius: 10px; overflow: hidden;">
-          <button class="tab-btn active" id="tab-launch-existing">Выбрать сохраненный мир</button>
-          <button class="tab-btn" id="tab-launch-new">+ Создать новый мир</button>
-        </div>
-
-        <!-- Saved Worlds List -->
-        <div id="launch-existing-list">
-          <div id="launcher-sim-cards"></div>
-        </div>
-
-        <!-- New World Form -->
-        <div id="launch-new-form" style="display: none;">
-          <div class="form-group">
-            <label><span>Папка / Название мира:</span></label>
-            <input type="text" id="launcher-sim-name" value="world_nature" placeholder="например, darwin_island">
-          </div>
-          <div class="form-group">
-            <label><span>Стартовая популяция блёбов:</span> <span class="slider-val" id="val-launch-pop">160</span></label>
-            <input type="range" id="launcher-sim-pop" min="20" max="500" value="160">
-          </div>
-          <div class="form-group">
-            <label><span>Количество растений на старте:</span> <span class="slider-val" id="val-launch-food">450</span></label>
-            <input type="range" id="launcher-sim-food" min="50" max="1500" value="450">
-          </div>
-          <div class="form-group">
-            <label><span>Размер арены мира:</span> <span class="slider-val" id="val-launch-size">280</span></label>
-            <input type="range" id="launcher-sim-size" min="150" max="600" value="280">
-          </div>
-          <div class="form-group">
-            <label><span>Множитель мутаций генома:</span> <span class="slider-val" id="val-launch-mut">1.0x</span></label>
-            <input type="range" id="launcher-sim-mut" min="0.2" max="6.0" step="0.2" value="1.0">
-          </div>
-          <div class="form-group">
-            <label><span>Режим выживания (Честная природа):</span></label>
-            <select id="launcher-sim-reseed">
-              <option value="false" selected>Честная природа: Без читов (при вымирании популяция гибнет)</option>
-              <option value="true">С подсадкой пионеров (спасение при падении ниже 25)</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <!-- Tab 2: Graphics -->
-      <div id="launch-view-graphics" style="display: none;">
+      <!-- Tab 2: New World Single Unified Form (No duplicate settings!) -->
+      <div id="launch-new-form" style="display: none;">
         <div class="form-group">
-          <label><span>Профиль качества 3D:</span></label>
-          <select id="launcher-gfx-preset">
-            <option value="ultra">Ультра (Мягкие тени + 60 FPS)</option>
-            <option value="medium" selected>Средний (Оптимальный)</option>
-            <option value="low">Низкий (Максимальный FPS на слабых ПК)</option>
+          <label><span>Имя папки нового мира:</span></label>
+          <input type="text" id="launcher-sim-name" value="world_nature" placeholder="например, savannah_1">
+        </div>
+        <div class="form-group">
+          <label><span>Стартовая популяция блёбов:</span> <span class="slider-val" id="val-launch-pop">160</span></label>
+          <input type="range" id="launcher-sim-pop" min="20" max="500" value="160">
+        </div>
+        <div class="form-group">
+          <label><span>Количество растений на старте:</span> <span class="slider-val" id="val-launch-food">450</span></label>
+          <input type="range" id="launcher-sim-food" min="50" max="1500" value="450">
+        </div>
+        <div class="form-group">
+          <label><span>Скорость прироста растений (еды / сек):</span> <span class="slider-val" id="val-launch-food-rate">25.0</span></label>
+          <input type="range" id="launcher-sim-food-rate" min="2.0" max="100.0" step="1.0" value="25.0">
+        </div>
+        <div class="form-group">
+          <label><span>Размер арены мира:</span> <span class="slider-val" id="val-launch-size">300</span></label>
+          <input type="range" id="launcher-sim-size" min="150" max="600" value="300">
+        </div>
+        <div class="form-group">
+          <label><span>Базовый метаболизм (трата энергии):</span> <span class="slider-val" id="val-launch-meta">0.030</span></label>
+          <input type="range" id="launcher-sim-meta" min="0.010" max="0.100" step="0.005" value="0.030">
+        </div>
+        <div class="form-group">
+          <label><span>Множитель мутаций ДНК:</span> <span class="slider-val" id="val-launch-mut">1.0x</span></label>
+          <input type="range" id="launcher-sim-mut" min="0.2" max="6.0" step="0.2" value="1.0">
+        </div>
+        <div class="form-group">
+          <label><span>Режим выживания (Честная природа):</span></label>
+          <select id="launcher-sim-reseed">
+            <option value="false" selected>Честная природа: Без читов (при вымирании популяция гибнет)</option>
+            <option value="true">Песочница: С подсадкой пионеров при падении ниже 25</option>
           </select>
         </div>
-        <div class="form-group">
-          <label><span>Динамические тени:</span></label>
-          <select id="launcher-gfx-shadows">
-            <option value="on" selected>Включены (Красивый мягкий свет)</option>
-            <option value="off">Выключены (Экономия GPU)</option>
-          </select>
-        </div>
-      </div>
 
-      <!-- Tab 3: World Logic -->
-      <div id="launch-view-logic" style="display: none;">
-        <div class="form-group">
-          <label><span>Скорость появления еды (растений / сек):</span> <span class="slider-val" id="val-launch-food-rate">25.0</span></label>
-          <input type="range" id="launcher-logic-food" min="2.0" max="80.0" step="1.0" value="25.0">
+        <div class="modal-actions" style="margin-top: 24px;">
+          <button class="btn active" id="btn-submit-create-sim" style="padding: 12px 28px; font-size: 15px; font-weight: 800;">
+            🚀 Создать и запустить мир
+          </button>
         </div>
-        <div class="form-group">
-          <label><span>Базовый расход энергии (метаболизм):</span> <span class="slider-val" id="val-launch-meta">0.030</span></label>
-          <input type="range" id="launcher-logic-meta" min="0.010" max="0.100" step="0.005" value="0.030">
-        </div>
-        <div class="form-group">
-          <label><span>Подсадка пионеров при вымирании:</span></label>
-          <select id="launcher-reseed-toggle">
-            <option value="false" selected>Выключена (Честная биология)</option>
-            <option value="true">Включена (Искусственное поддержание 25 особей)</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="modal-actions" style="margin-top: 28px;">
-        <button class="btn active" id="btn-launcher-enter" style="padding: 12px 28px; font-size: 15px; font-weight: 800;">
-          ▶ ВОЙТИ В СИМУЛЯЦИЮ
-        </button>
       </div>
     </div>
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════ -->
-  <!-- MODAL 1: SAFE RESET CONFIRMATION                                -->
+  <!-- MODAL 2: CURRENT WORLD LIVE CONFIG (No duplicates)              -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="modal-world-config">
+    <div class="modal-box" style="width: 580px;">
+      <h2>
+        <span>⚙️ Настройки текущего мира</span>
+        <button class="close-btn" id="btn-close-world-config">×</button>
+      </h2>
+      <div style="font-size: 13px; color: #94a3b8; margin-bottom: 16px;">
+        Изменение параметров живого мира <b id="cfg-sim-name" style="color:#4ade80;">default</b> в реальном времени:
+      </div>
+
+      <div class="form-group">
+        <label><span>Скорость появления еды (растений / сек):</span> <span class="slider-val" id="val-live-food-rate">25.0</span></label>
+        <input type="range" id="live-food-rate" min="2.0" max="100.0" step="1.0" value="25.0">
+      </div>
+      <div class="form-group">
+        <label><span>Базовый метаболизм (трата энергии):</span> <span class="slider-val" id="val-live-meta">0.030</span></label>
+        <input type="range" id="live-meta" min="0.005" max="0.100" step="0.005" value="0.030">
+      </div>
+      <div class="form-group">
+        <label><span>Множитель мутаций ДНК:</span> <span class="slider-val" id="val-live-mut">1.0x</span></label>
+        <input type="range" id="live-mut" min="0.1" max="5.0" step="0.1" value="1.0">
+      </div>
+      <div class="form-group">
+        <label><span>Режим выживания:</span></label>
+        <select id="live-reseed-toggle">
+          <option value="false">Честная природа (Без читов)</option>
+          <option value="true">Песочница (Подсадка пионеров)</option>
+        </select>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn" id="btn-cancel-world-config">Отмена</button>
+        <button class="btn active" id="btn-apply-world-config" style="padding: 10px 22px;">💾 Применить изменения</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- MODAL 3: GRAPHICS SETTINGS                                      -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="modal-graphics">
+    <div class="modal-box" style="width: 500px;">
+      <h2>
+        <span>🎮 Настройки Графики 3D</span>
+        <button class="close-btn" id="btn-close-graphics">×</button>
+      </h2>
+      <div class="form-group">
+        <label><span>Профиль качества 3D:</span></label>
+        <select id="gfx-preset">
+          <option value="ultra">Ультра (Мягкие тени + 60 FPS)</option>
+          <option value="medium" selected>Средний (Оптимальный)</option>
+          <option value="low">Низкий (Максимальный FPS на слабых ПК)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label><span>Динамические тени:</span></label>
+        <select id="gfx-shadows">
+          <option value="on" selected>Включены (Красивый мягкий свет)</option>
+          <option value="off">Выключены (Экономия GPU)</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button class="btn active" id="btn-apply-graphics" style="padding: 10px 22px;">Сохранить и закрыть</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- MODAL 4: SAFE RESET CONFIRMATION                                -->
   <!-- ═══════════════════════════════════════════════════════════════ -->
   <div class="modal-overlay" id="modal-confirm-reset">
     <div class="modal-box" style="width: 520px;">
@@ -794,7 +780,7 @@
       <div style="font-size: 14px; line-height: 1.6; color: #cbd5e1; margin-bottom: 20px;">
         Вы действительно хотите сбросить текущую симуляцию <b id="reset-sim-target" style="color:#4ade80;">default</b>?
         <div style="background: #0b0f17; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 14px; margin-top: 12px; font-size: 13px;">
-          • Детальные логи (<code style="color:#38bdf8;">history.jsonl</code> и <code style="color:#38bdf8;">events.log</code>) будут очищены для чистого забега.<br>
+          • Детальные логи (<code style="color:#38bdf8;">history.jsonl</code> и <code style="color:#38bdf8;">events.log</code>) будут очищены для нового забега.<br>
           • <b>Краткая сводка забега</b> (прожитые тики, пик популяции, число поколений) сохранится в <code style="color:#4ade80;">summary.json</code> и архиве.<br>
           • Мир вернется к стартовой популяции.
         </div>
@@ -939,7 +925,7 @@
       });
     });
 
-    // --- CHART.JS CONFIGURATION & RACE-FREE SYNC ---
+    // --- CHART.JS CONFIGURATION & SYNC ---
     const MAX_POINTS = 90;
     let currentSimName = 'default';
     let lastChartTick = 0;
@@ -1430,52 +1416,21 @@
     });
 
     // ═══════════════════════════════════════════════════════════════
-    // LAUNCHER & MAIN MENU LOGIC
+    // LAUNCHER & WORLDS HUB (NO DUPLICATED SETTINGS)
     // ═══════════════════════════════════════════════════════════════
     const modalLauncher = document.getElementById('modal-launcher');
 
-    // Open launcher on startup if not yet dismissed
-    if (!sessionStorage.getItem('launcher_seen')) {
-      openLauncher();
-      sessionStorage.setItem('launcher_seen', 'true');
-    }
-
     document.getElementById('btn-open-launcher').addEventListener('click', openLauncher);
-    document.getElementById('btn-open-sim-hub').addEventListener('click', () => {
-      openLauncher();
-      switchLauncherTab('worlds');
-    });
-    document.getElementById('btn-open-settings').addEventListener('click', () => {
-      openLauncher();
-      switchLauncherTab('logic');
-    });
+    document.getElementById('btn-launcher-exit').addEventListener('click', closeLauncher);
 
     function openLauncher() {
       loadLauncherSimList();
       modalLauncher.style.display = 'flex';
     }
 
-    function switchLauncherTab(tab) {
-      document.querySelectorAll('.launcher-nav-btn').forEach(b => b.classList.remove('active'));
-      document.getElementById('launch-view-worlds').style.display = 'none';
-      document.getElementById('launch-view-graphics').style.display = 'none';
-      document.getElementById('launch-view-logic').style.display = 'none';
-
-      if (tab === 'worlds') {
-        document.getElementById('btn-launch-tab-worlds').classList.add('active');
-        document.getElementById('launch-view-worlds').style.display = 'block';
-      } else if (tab === 'graphics') {
-        document.getElementById('btn-launch-tab-graphics').classList.add('active');
-        document.getElementById('launch-view-graphics').style.display = 'block';
-      } else if (tab === 'logic') {
-        document.getElementById('btn-launch-tab-logic').classList.add('active');
-        document.getElementById('launch-view-logic').style.display = 'block';
-      }
+    function closeLauncher() {
+      modalLauncher.style.display = 'none';
     }
-
-    document.getElementById('btn-launch-tab-worlds').addEventListener('click', () => switchLauncherTab('worlds'));
-    document.getElementById('btn-launch-tab-graphics').addEventListener('click', () => switchLauncherTab('graphics'));
-    document.getElementById('btn-launch-tab-logic').addEventListener('click', () => switchLauncherTab('logic'));
 
     document.getElementById('tab-launch-existing').addEventListener('click', () => {
       document.getElementById('tab-launch-existing').classList.add('active');
@@ -1507,10 +1462,10 @@
           card.innerHTML = `
             <div>
               <div class="sim-name">${item.name} ${isActive ? '<span style="color:#4ade80;font-size:12px;">(Активен)</span>' : ''}</div>
-              <div class="sim-meta">Тик: ${item.last_tick} • Рождений: ${item.total_births} • Смертей: ${item.total_deaths}</div>
+              <div class="sim-meta">Тик: ${item.last_tick} • Рождений: ${item.total_births} • Смертей: ${item.total_deaths} • Пик: ${item.peak_population}</div>
             </div>
             <div>
-              ${!isActive ? `<button class="btn active btn-launcher-switch" data-sim="${item.name}">Выбрать</button>` : '<span style="color:#4ade80;font-weight:700;">✓ Загружен</span>'}
+              ${!isActive ? `<button class="btn active btn-launcher-switch" data-sim="${item.name}">Войти в мир</button>` : '<button class="btn-return btn-close-modal">В симуляцию</button>'}
             </div>
           `;
           container.appendChild(card);
@@ -1524,13 +1479,17 @@
             document.getElementById('active-sim-badge').innerText = name;
             resetAllCharts();
             syncHistory(name);
-            loadLauncherSimList();
+            closeLauncher();
           });
+        });
+
+        document.querySelectorAll('.btn-close-modal').forEach(btn => {
+          btn.addEventListener('click', closeLauncher);
         });
       } catch (e) {}
     }
 
-    // Sliders sync in launcher
+    // Sliders sync helper
     const bindSlider = (sliderId, valId, suffix = '') => {
       const s = document.getElementById(sliderId);
       const v = document.getElementById(valId);
@@ -1538,58 +1497,119 @@
     };
     bindSlider('launcher-sim-pop', 'val-launch-pop');
     bindSlider('launcher-sim-food', 'val-launch-food');
+    bindSlider('launcher-sim-food-rate', 'val-launch-food-rate');
     bindSlider('launcher-sim-size', 'val-launch-size');
     bindSlider('launcher-sim-mut', 'val-launch-mut', 'x');
-    bindSlider('launcher-logic-food', 'val-launch-food-rate');
-    bindSlider('launcher-logic-meta', 'val-launch-meta');
+    bindSlider('launcher-sim-meta', 'val-launch-meta');
 
-    // Launch / Enter button handler
-    document.getElementById('btn-launcher-enter').addEventListener('click', async () => {
-      // Check if user is on the "Create New World" tab
-      const isCreatingNew = document.getElementById('tab-launch-new').classList.contains('active');
+    // Create New World Submit
+    document.getElementById('btn-submit-create-sim').addEventListener('click', async () => {
+      const name = document.getElementById('launcher-sim-name').value;
+      const creatures = parseInt(document.getElementById('launcher-sim-pop').value);
+      const food = parseInt(document.getElementById('launcher-sim-food').value);
+      const world_size = parseFloat(document.getElementById('launcher-sim-size').value);
+      const mutation_rate = parseFloat(document.getElementById('launcher-sim-mut').value);
+      const enable_pioneer_reseeding = document.getElementById('launcher-sim-reseed').value === 'true';
 
-      if (isCreatingNew) {
-        const name = document.getElementById('launcher-sim-name').value;
-        const creatures = parseInt(document.getElementById('launcher-sim-pop').value);
-        const food = parseInt(document.getElementById('launcher-sim-food').value);
-        const world_size = parseFloat(document.getElementById('launcher-sim-size').value);
-        const mutation_rate = parseFloat(document.getElementById('launcher-sim-mut').value);
-        const enable_pioneer_reseeding = document.getElementById('launcher-sim-reseed').value === 'true';
+      await fetch('/api/simulations/new', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, creatures, food, world_size, mutation_rate, enable_pioneer_reseeding })
+      });
 
-        await fetch('/api/simulations/new', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, creatures, food, world_size, mutation_rate, enable_pioneer_reseeding })
-        });
-        currentSimName = name;
-        document.getElementById('active-sim-badge').innerText = name;
-        resetAllCharts();
-        syncHistory(name);
-      } else {
-        // Apply logic updates if any
-        const food_spawn_rate = parseFloat(document.getElementById('launcher-logic-food').value);
-        const base_metabolism = parseFloat(document.getElementById('launcher-logic-meta').value);
-        const enable_pioneer_reseeding = document.getElementById('launcher-reseed-toggle').value === 'true';
+      // Update food spawn rate & metabolism in this new world
+      const food_spawn_rate = parseFloat(document.getElementById('launcher-sim-food-rate').value);
+      const base_metabolism = parseFloat(document.getElementById('launcher-sim-meta').value);
+      await fetch('/api/config/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ food_spawn_rate, base_metabolism, mutation_rate, enable_pioneer_reseeding })
+      });
 
-        await fetch('/api/config/update', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ food_spawn_rate, base_metabolism, enable_pioneer_reseeding })
-        });
-      }
+      currentSimName = name;
+      document.getElementById('active-sim-badge').innerText = name;
+      resetAllCharts();
+      syncHistory(name);
+      closeLauncher();
+    });
 
-      // Apply graphics settings
-      const gfx = document.getElementById('launcher-gfx-preset').value;
-      const shadows = document.getElementById('launcher-gfx-shadows').value === 'on';
-      if (gfx === 'low') {
+    // ═══════════════════════════════════════════════════════════════
+    // LIVE WORLD CONFIG (NO DUPLICATES)
+    // ═══════════════════════════════════════════════════════════════
+    const modalWorldConfig = document.getElementById('modal-world-config');
+
+    document.getElementById('btn-open-world-config').addEventListener('click', async () => {
+      document.getElementById('cfg-sim-name').innerText = currentSimName;
+      try {
+        const res = await fetch('/api/config/current');
+        const cfg = await res.json();
+        document.getElementById('live-food-rate').value = cfg.food_spawn_per_sec;
+        document.getElementById('val-live-food-rate').innerText = cfg.food_spawn_per_sec;
+        document.getElementById('live-meta').value = cfg.base_metabolism;
+        document.getElementById('val-live-meta').innerText = cfg.base_metabolism;
+        document.getElementById('live-mut').value = cfg.mutation_rate_multiplier;
+        document.getElementById('val-live-mut').innerText = cfg.mutation_rate_multiplier + 'x';
+        document.getElementById('live-reseed-toggle').value = cfg.enable_pioneer_reseeding ? 'true' : 'false';
+      } catch (e) {}
+      modalWorldConfig.style.display = 'flex';
+    });
+
+    bindSlider('live-food-rate', 'val-live-food-rate');
+    bindSlider('live-meta', 'val-live-meta');
+    bindSlider('live-mut', 'val-live-mut', 'x');
+
+    document.getElementById('btn-close-world-config').addEventListener('click', () => modalWorldConfig.style.display = 'none');
+    document.getElementById('btn-cancel-world-config').addEventListener('click', () => modalWorldConfig.style.display = 'none');
+
+    document.getElementById('btn-apply-world-config').addEventListener('click', async () => {
+      const food_spawn_rate = parseFloat(document.getElementById('live-food-rate').value);
+      const base_metabolism = parseFloat(document.getElementById('live-meta').value);
+      const mutation_rate = parseFloat(document.getElementById('live-mut').value);
+      const enable_pioneer_reseeding = document.getElementById('live-reseed-toggle').value === 'true';
+
+      await fetch('/api/config/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ food_spawn_rate, base_metabolism, mutation_rate, enable_pioneer_reseeding })
+      });
+      modalWorldConfig.style.display = 'none';
+    });
+
+    // ═══════════════════════════════════════════════════════════════
+    // GRAPHICS MODAL
+    // ═══════════════════════════════════════════════════════════════
+    const modalGfx = document.getElementById('modal-graphics');
+    document.getElementById('btn-open-graphics').addEventListener('click', () => modalGfx.style.display = 'flex');
+    document.getElementById('btn-close-graphics').addEventListener('click', () => modalGfx.style.display = 'none');
+
+    document.getElementById('btn-apply-graphics').addEventListener('click', () => {
+      const val = document.getElementById('gfx-preset').value;
+      const shadows = document.getElementById('gfx-shadows').value === 'on';
+      if (val === 'low') {
         renderer.shadowMap.enabled = false;
         dirLight.castShadow = false;
       } else {
         renderer.shadowMap.enabled = shadows;
         dirLight.castShadow = shadows;
       }
+      modalGfx.style.display = 'none';
+    });
 
-      modalLauncher.style.display = 'none';
+    // Global Escape key handler to close any open modal
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        if (modalLauncher.style.display === 'flex') {
+          closeLauncher();
+        } else if (modalWorldConfig.style.display === 'flex') {
+          modalWorldConfig.style.display = 'none';
+        } else if (modalGfx.style.display === 'flex') {
+          modalGfx.style.display = 'none';
+        } else if (modalReset.style.display === 'flex') {
+          modalReset.style.display = 'none';
+        } else {
+          openLauncher();
+        }
+      }
     });
 
     // --- ANIMATION LOOP ---

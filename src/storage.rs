@@ -38,6 +38,20 @@ pub struct SimulationSummary {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ChartTimelineData {
+    pub world: String,
+    pub total_points: usize,
+    pub last_updated_tick: u64,
+    pub ticks: Vec<u64>,
+    pub population: Vec<usize>,
+    pub food: Vec<usize>,
+    pub meat: Vec<usize>,
+    pub avg_eyes: Vec<f32>,
+    pub avg_jaw: Vec<f32>,
+    pub avg_radius: Vec<f32>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DetailedHistoryEntry {
     pub tick: u64,
     pub population: usize,
@@ -186,7 +200,7 @@ impl StorageManager {
         }
     }
 
-    // Append periodic history snapshot
+    // Append periodic history snapshot and maintain timeline.json on disk
     pub fn append_history(
         &self,
         name: &str,
@@ -213,6 +227,24 @@ impl StorageManager {
                 cache.pop_front();
             }
             cache.push_back(entry.clone());
+
+            // Save clean timeline.json on disk for easy human & script reading
+            let tl = ChartTimelineData {
+                world: name.to_string(),
+                total_points: cache.len(),
+                last_updated_tick: point.tick,
+                ticks: cache.iter().map(|e| e.tick).collect(),
+                population: cache.iter().map(|e| e.population).collect(),
+                food: cache.iter().map(|e| e.food_count).collect(),
+                meat: cache.iter().map(|e| e.meat_count).collect(),
+                avg_eyes: cache.iter().map(|e| e.avg_eyes).collect(),
+                avg_jaw: cache.iter().map(|e| e.avg_jaw).collect(),
+                avg_radius: cache.iter().map(|e| e.avg_radius).collect(),
+            };
+            let timeline_path = self.sim_path(name).join("timeline.json");
+            if let Ok(json) = serde_json::to_string_pretty(&tl) {
+                let _ = fs::write(timeline_path, json);
+            }
         }
 
         let path = self.sim_path(name).join("history.jsonl");
@@ -258,6 +290,15 @@ impl StorageManager {
         }
     }
 
+    pub fn get_timeline(&self, name: &str) -> Option<ChartTimelineData> {
+        let timeline_path = self.sim_path(name).join("timeline.json");
+        if let Ok(content) = fs::read_to_string(timeline_path) {
+            serde_json::from_str(&content).ok()
+        } else {
+            None
+        }
+    }
+
     // Safe Archive & Reset: creates concise summary.json & runs_archive.jsonl, wipes tick history
     pub fn archive_and_reset(&self, name: &str, stats: &WorldStats, max_gen: usize, dominant_spec: &str) {
         let summary = SimulationSummary {
@@ -293,9 +334,26 @@ impl StorageManager {
             }
         }
 
-        // 3. Clear detailed history.jsonl for new run
+        // 3. Clear detailed history.jsonl and timeline.json for new run
         let hist_path = self.sim_path(name).join("history.jsonl");
         let _ = fs::write(hist_path, "");
+
+        let timeline_path = self.sim_path(name).join("timeline.json");
+        let empty_tl = ChartTimelineData {
+            world: name.to_string(),
+            total_points: 0,
+            last_updated_tick: 0,
+            ticks: Vec::new(),
+            population: Vec::new(),
+            food: Vec::new(),
+            meat: Vec::new(),
+            avg_eyes: Vec::new(),
+            avg_jaw: Vec::new(),
+            avg_radius: Vec::new(),
+        };
+        if let Ok(json) = serde_json::to_string_pretty(&empty_tl) {
+            let _ = fs::write(timeline_path, json);
+        }
 
         // 4. Reset events.log with header
         let events_path = self.sim_path(name).join("events.log");
