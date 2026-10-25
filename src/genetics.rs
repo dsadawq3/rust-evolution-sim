@@ -147,7 +147,7 @@ impl DiploidGenome {
 
         let body_radius = avg(0).clamp(0.5, 2.5);
         let mass = body_radius * body_radius * 1.8;
-        let base_speed = avg(1).clamp(0.8, 6.5);
+        let base_speed = avg(1).clamp(0.6, 3.2);
         let max_health = avg(2).clamp(30.0, 250.0);
         let metabolic_efficiency = avg(3).clamp(0.5, 2.2);
         let jaw_strength = avg(4).clamp(0.0, 1.0);

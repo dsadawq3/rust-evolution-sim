@@ -274,28 +274,37 @@ impl World {
                             self.creatures[i].pos += normal * (overlap * 0.35);
                             self.creatures[i].contact_impulse = 0.6;
 
-                            // Attack / Combat action
+                            // Attack / Combat action with biological satiety and stamina cost
                             if c_action.bite && c_jaw > 0.15 {
-                                let damage = (c_jaw * 34.0 * (1.0 - self.creatures[j].phenotype.armor_spikes * 0.72)).max(1.0);
-                                self.creatures[j].health -= damage;
-                                self.creatures[j].last_damage_taken = damage;
+                                let is_hungry = self.creatures[i].energy < self.creatures[i].max_energy * 0.85;
+                                let bite_cost = self.config.bite_cost * (0.8 + c_jaw * 1.4);
 
-                                let blood_calories = damage * 0.55 * (0.35 + c_jaw * 0.65);
-                                self.creatures[i].energy = (self.creatures[i].energy + blood_calories).min(self.creatures[i].max_energy);
-                                self.chemical_grid.deposit(self.creatures[j].pos, SCENT_DANGER, 1.4);
+                                if is_hungry && self.creatures[i].energy > bite_cost {
+                                    self.creatures[i].energy -= bite_cost;
 
-                                // Armor spikes recoil
-                                if self.creatures[j].phenotype.armor_spikes > 0.1 {
-                                    let reflect = damage * self.creatures[j].phenotype.armor_spikes * 0.35;
-                                    self.creatures[i].health -= reflect;
-                                }
+                                    let victim_armor = self.creatures[j].phenotype.armor_spikes;
+                                    let damage = (c_jaw * 26.0 * (1.0 - victim_armor * 0.82)).max(0.5);
+                                    self.creatures[j].health -= damage;
+                                    self.creatures[j].last_damage_taken = damage;
 
-                                if self.creatures[j].health <= 0.0 {
-                                    self.creatures[j].is_alive = false;
-                                    self.creatures[i].kills += 1;
-                                    self.predation_deaths += 1;
-                                    if let Some(t) = telemetry {
-                                        t.log(self.tick, "COMBAT", format!("Creature #{} killed #{} (jaw: {:.2})", self.creatures[i].id, self.creatures[j].id, c_jaw));
+                                    let blood_calories = damage * 0.40 * (0.35 + c_jaw * 0.65);
+                                    self.creatures[i].energy = (self.creatures[i].energy + blood_calories).min(self.creatures[i].max_energy);
+                                    self.chemical_grid.deposit(self.creatures[j].pos, SCENT_DANGER, 1.8);
+
+                                    // Strong armor & spikes counter-defense (dissuades reckless predators)
+                                    if victim_armor > 0.08 {
+                                        let reflect = damage * (0.35 + victim_armor * 0.85);
+                                        self.creatures[i].health -= reflect;
+                                        self.creatures[i].energy = (self.creatures[i].energy - reflect * 0.5).max(0.0);
+                                    }
+
+                                    if self.creatures[j].health <= 0.0 {
+                                        self.creatures[j].is_alive = false;
+                                        self.creatures[i].kills += 1;
+                                        self.predation_deaths += 1;
+                                        if let Some(t) = telemetry {
+                                            t.log(self.tick, "COMBAT", format!("Хищник #{} добыл жертву #{} (челюсть: {:.2})", self.creatures[i].id, self.creatures[j].id, c_jaw));
+                                        }
                                     }
                                 }
                             }

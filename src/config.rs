@@ -58,7 +58,7 @@ impl Default for SimConfig {
             movement_energy_cost: 0.02,
             eye_maintenance_cost: 0.008,
             armor_maintenance_cost: 0.015,
-            bite_cost: 1.5,
+            bite_cost: 2.5,
             min_reproduction_energy: 70.0,
 
             mutation_rate_multiplier: 1.0,

@@ -253,15 +253,20 @@ impl Creature {
             self.reproduction_cooldown -= 1.0;
         }
 
-        let turn_rate = self.last_action.steer * 0.18;
+        let turn_rate = self.last_action.steer * 0.11;
         self.rotation = normalize_angle(self.rotation + turn_rate);
 
         let forward_dir = Vec2::from_angle(self.rotation);
-        let thrust = self.last_action.throttle * self.phenotype.base_speed * 0.35;
+        let thrust = self.last_action.throttle * self.phenotype.base_speed * 0.22;
         let accel = forward_dir * (thrust / self.phenotype.mass);
         self.vel += accel;
 
-        self.vel = self.vel * 0.86;
+        self.vel = self.vel * 0.88;
+        let max_speed = self.phenotype.base_speed * 0.65;
+        let cur_spd_sq = self.vel.length_squared();
+        if cur_spd_sq > max_speed * max_speed && cur_spd_sq > 0.0001 {
+            self.vel = self.vel * (max_speed / cur_spd_sq.sqrt());
+        }
         self.pos += self.vel;
 
         let margin = self.phenotype.body_radius;
