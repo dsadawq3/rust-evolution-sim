@@ -9,6 +9,8 @@ mod math;
 mod server;
 mod snapshot;
 mod spatial;
+mod species;
+mod storage;
 mod telemetry;
 mod world;
 
@@ -18,6 +20,7 @@ use engine::SimEngine;
 use parking_lot::RwLock;
 use server::{create_router, AppState};
 use std::sync::Arc;
+use storage::StorageManager;
 use telemetry::Telemetry;
 use tokio::sync::broadcast;
 use world::World;
@@ -36,10 +39,21 @@ async fn main() {
     config.world_height = args.world_size;
     config.time_scale = args.speed;
 
+    let storage = Arc::new(RwLock::new(StorageManager::new("default")));
+    {
+        let s = storage.read();
+        s.save_config("default", &config);
+    }
+
     let world = Arc::new(RwLock::new(World::new(config)));
     let (snapshot_tx, _) = broadcast::channel(32);
 
-    let engine = SimEngine::new(world.clone(), telemetry.clone(), snapshot_tx.clone());
+    let engine = SimEngine::new(
+        world.clone(),
+        telemetry.clone(),
+        storage.clone(),
+        snapshot_tx.clone(),
+    );
 
     if args.headless {
         engine.run_benchmark(args.benchmark_ticks);
@@ -55,6 +69,7 @@ async fn main() {
     let app_state = Arc::new(AppState {
         world,
         telemetry,
+        storage,
         snapshot_tx,
     });
 

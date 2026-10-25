@@ -1,7 +1,9 @@
 use crate::config::SimConfig;
 use crate::snapshot::{SnapshotBuilder, WorldSnapshot};
+use crate::species::{SpeciesAnalyzer, SpeciesInfo};
+use crate::storage::{DetailedHistoryEntry, SimulationMeta, StorageManager};
 use crate::telemetry::{SimEvent, Telemetry};
-use crate::world::{HistoryPoint, World, WorldStats};
+use crate::world::{World, WorldStats};
 use axum::{
     extract::{
         ws::{Message, WebSocket, WebSocketUpgrade},
@@ -21,6 +23,7 @@ use tower_http::cors::CorsLayer;
 pub struct AppState {
     pub world: Arc<RwLock<World>>,
     pub telemetry: Telemetry,
+    pub storage: Arc<RwLock<StorageManager>>,
     pub snapshot_tx: broadcast::Sender<WorldSnapshot>,
 }
 
@@ -30,7 +33,11 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route("/ws", get(ws_handler))
         .route("/api/stats", get(stats_handler))
         .route("/api/history", get(history_handler))
+        .route("/api/species", get(species_handler))
         .route("/api/events", get(events_handler))
+        .route("/api/simulations", get(simulations_list_handler))
+        .route("/api/simulations/new", post(new_simulation_handler))
+        .route("/api/simulations/switch/:name", post(switch_simulation_handler))
         .route("/api/creature/:id", get(creature_detail_handler))
         .route("/api/speed", post(speed_handler))
         .route("/api/action/meteor", post(meteor_handler))
@@ -77,7 +84,7 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
 
     let mut recv_task = tokio::spawn(async move {
         while let Some(Ok(_msg)) = receiver.next().await {
-            // keep alive ping/pong
+            // ping/pong
         }
     });
 
@@ -92,13 +99,84 @@ async fn stats_handler(State(state): State<Arc<AppState>>) -> Json<WorldStats> {
     Json(w.get_stats())
 }
 
-async fn history_handler(State(state): State<Arc<AppState>>) -> Json<Vec<HistoryPoint>> {
+async fn history_handler(State(state): State<Arc<AppState>>) -> Json<Vec<DetailedHistoryEntry>> {
+    let storage = state.storage.read();
+    let active_name = storage.get_active_name();
+    let recent = storage.read_recent_history(&active_name, 100);
+    Json(recent)
+}
+
+async fn species_handler(State(state): State<Arc<AppState>>) -> Json<Vec<SpeciesInfo>> {
     let w = state.world.read();
-    Json(w.history.clone())
+    Json(SpeciesAnalyzer::classify_population(&w.creatures))
 }
 
 async fn events_handler(State(state): State<Arc<AppState>>) -> Json<Vec<SimEvent>> {
     Json(state.telemetry.get_recent_events())
+}
+
+async fn simulations_list_handler(State(state): State<Arc<AppState>>) -> Json<Vec<SimulationMeta>> {
+    let storage = state.storage.read();
+    Json(storage.list_simulations())
+}
+
+#[derive(Deserialize)]
+pub struct NewSimPayload {
+    pub name: String,
+    pub creatures: Option<usize>,
+    pub food: Option<usize>,
+    pub world_size: Option<f32>,
+    pub mutation_rate: Option<f32>,
+}
+
+async fn new_simulation_handler(
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<NewSimPayload>,
+) -> Json<String> {
+    let mut config = SimConfig::default();
+    if let Some(c) = payload.creatures { config.initial_creatures = c; }
+    if let Some(f) = payload.food { config.initial_food = f; }
+    if let Some(w) = payload.world_size {
+        config.world_width = w;
+        config.world_height = w;
+    }
+    if let Some(m) = payload.mutation_rate { config.mutation_rate_multiplier = m; }
+
+    let safe_name = payload.name.trim().replace(|c: char| !c.is_alphanumeric() && c != '_' && c != '-', "_");
+    let safe_name = if safe_name.is_empty() { "sim_custom".to_string() } else { safe_name };
+
+    {
+        let mut storage = state.storage.write();
+        storage.set_active_name(&safe_name);
+        storage.save_config(&safe_name, &config);
+    }
+
+    {
+        let mut w = state.world.write();
+        *w = World::new(config);
+    }
+
+    state.telemetry.log(0, "INFO", format!("Created and launched new simulation '{}'", safe_name));
+    Json(safe_name)
+}
+
+async fn switch_simulation_handler(
+    State(state): State<Arc<AppState>>,
+    Path(name): Path<String>,
+) -> Json<&'static str> {
+    let mut storage = state.storage.write();
+    storage.set_active_name(&name);
+
+    if let Some(config) = storage.load_config(&name) {
+        let mut w = state.world.write();
+        *w = World::new(config);
+    } else {
+        let mut w = state.world.write();
+        *w = World::new(SimConfig::default());
+    }
+
+    state.telemetry.log(0, "INFO", format!("Switched to simulation '{}'", name));
+    Json("SWITCHED")
 }
 
 async fn creature_detail_handler(

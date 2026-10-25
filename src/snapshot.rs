@@ -1,4 +1,6 @@
 use crate::creature::Creature;
+use crate::species::{SpeciesAnalyzer, SpeciesInfo};
+use crate::telemetry::SimEvent;
 use crate::world::{World, WorldStats};
 use serde::{Deserialize, Serialize};
 
@@ -26,6 +28,10 @@ pub struct WorldSnapshot {
     pub creatures: Vec<CreatureRenderData>,
     pub food: Vec<[f32; 2]>,
     pub meat: Vec<[f32; 4]>, // [x, y, radius, energy_ratio]
+    pub species: Vec<SpeciesInfo>,
+    pub active_sim: String,
+    pub available_sims: Vec<String>,
+    pub recent_events: Vec<SimEvent>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -58,7 +64,13 @@ pub struct CreatureDetail {
 pub struct SnapshotBuilder;
 
 impl SnapshotBuilder {
-    pub fn build(world: &World, tps: f32) -> WorldSnapshot {
+    pub fn build(
+        world: &World,
+        tps: f32,
+        active_sim: &str,
+        available_sims: Vec<String>,
+        recent_events: Vec<SimEvent>,
+    ) -> WorldSnapshot {
         let creatures: Vec<CreatureRenderData> = world
             .creatures
             .iter()
@@ -96,6 +108,8 @@ impl SnapshotBuilder {
             .map(|m| [m.pos.x, m.pos.y, m.radius, (m.remaining_energy / m.max_energy).clamp(0.0, 1.0)])
             .collect();
 
+        let species = SpeciesAnalyzer::classify_population(&world.creatures);
+
         WorldSnapshot {
             tick: world.tick,
             tps,
@@ -103,6 +117,10 @@ impl SnapshotBuilder {
             creatures,
             food,
             meat,
+            species,
+            active_sim: active_sim.to_string(),
+            available_sims,
+            recent_events,
         }
     }
 
