@@ -656,7 +656,7 @@
     scentTex.minFilter = THREE.LinearFilter;
     const scentMat = new THREE.MeshBasicMaterial({
       map: scentTex, transparent: true, depthWrite: false,
-      blending: THREE.AdditiveBlending, opacity: 0.9
+      blending: THREE.AdditiveBlending, opacity: 1
     });
     const scentMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), scentMat);
     scentMesh.rotation.x = -Math.PI / 2;
@@ -1443,10 +1443,11 @@
         const danger = s.scent[i * 3 + 1];
         const mate = s.scent[i * 3 + 2];
         const o = i * 4;
-        img.data[o] = Math.min(255, danger * 1.5 + mate * 0.9);
-        img.data[o + 1] = Math.min(255, plant * 1.6);
-        img.data[o + 2] = Math.min(255, mate * 1.55 + danger * 0.2);
-        img.data[o + 3] = Math.min(210, plant * 2.1 + danger * 2.3 + mate * 2.1);
+        const lift = (v) => Math.min(255, Math.pow(Math.max(v, 0) / 36, 0.5) * 230);
+        img.data[o] = lift(danger * 2.4 + mate * 1.4);
+        img.data[o + 1] = lift(plant * 2.6);
+        img.data[o + 2] = lift(mate * 2.4 + danger * 0.5);
+        img.data[o + 3] = Math.min(240, lift(plant + danger * 1.4 + mate * 1.4));
       }
       scentCtx.putImageData(img, 0, 0);
       scentTex.needsUpdate = true;
@@ -1624,14 +1625,36 @@
 
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
+    const pickVec = new THREE.Vector3();
     let press = null;
     let lastPick = { id: null, t: 0 };
     let lastSpecies = [];
     let speciesStamp = -1;
     function pick(event) {
       const rect = renderer.domElement.getBoundingClientRect();
-      pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-      pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+      const mx = event.clientX - rect.left;
+      const my = event.clientY - rect.top;
+      let best = null;
+      let bestD = 34 * 34;
+      creatureMeshes.forEach((group) => {
+        const lift = (group.userData.baseScale || 1) * 0.45;
+        pickVec.set(group.position.x, group.position.y + lift, group.position.z);
+        pickVec.project(camera);
+        if (pickVec.z > 1) return;
+        const sx = (pickVec.x * 0.5 + 0.5) * rect.width;
+        const sy = (-pickVec.y * 0.5 + 0.5) * rect.height;
+        const dx = mx - sx;
+        const dy = my - sy;
+        const d = dx * dx + dy * dy;
+        const reach = Math.max(26, Math.min(64, (group.userData.baseScale || 1) * 18));
+        if (d < bestD && d < reach * reach) {
+          bestD = d;
+          best = group.userData.id;
+        }
+      });
+      if (best != null) return best;
+      pointer.x = (mx / rect.width) * 2 - 1;
+      pointer.y = -(my / rect.height) * 2 + 1;
       raycaster.setFromCamera(pointer, camera);
       const hits = raycaster.intersectObjects(domes, false);
       if (!hits.length) return null;
