@@ -60,6 +60,31 @@ impl ChemicalGrid {
         self.grid[channel][idx]
     }
 
+    /// Coarse scent veil for the observatory. Packed RGB bytes: plant, danger, mate.
+    pub fn preview(&self, max_dim: usize) -> (usize, usize, Vec<u8>) {
+        let max_dim = max_dim.max(1);
+        let step_x = (self.width / max_dim).max(1);
+        let step_y = (self.height / max_dim).max(1);
+        let w = (self.width + step_x - 1) / step_x;
+        let h = (self.height + step_y - 1) / step_y;
+        let mut out = vec![0u8; w * h * CHANNELS];
+
+        for gy in 0..h {
+            let sy = (gy * step_y).min(self.height.saturating_sub(1));
+            for gx in 0..w {
+                let sx = (gx * step_x).min(self.width.saturating_sub(1));
+                let idx = sy * self.width + sx;
+                let base = (gy * w + gx) * CHANNELS;
+                for channel in 0..CHANNELS {
+                    let scaled = (self.grid[channel][idx] * 28.0).clamp(0.0, 255.0);
+                    out[base + channel] = scaled as u8;
+                }
+            }
+        }
+
+        (w, h, out)
+    }
+
     pub fn update(&mut self) {
         let w = self.width;
         let h = self.height;

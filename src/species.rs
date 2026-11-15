@@ -16,6 +16,32 @@ pub struct SpeciesInfo {
     pub avg_eyes: f32,
     pub avg_armor: f32,
     pub max_generation: usize,
+    #[serde(default)]
+    pub cluster: u32,
+}
+
+/// Same diet split as `World::get_stats`: herbivore < 0.28, carnivore > 0.55.
+pub fn diet_of(jaw: f32) -> u8 {
+    if jaw < 0.28 {
+        0
+    } else if jaw > 0.55 {
+        2
+    } else {
+        1
+    }
+}
+
+pub fn cluster_of(c: &Creature) -> u32 {
+    let diet_key = diet_of(c.phenotype.jaw_strength) as u32;
+    let size_key = if c.phenotype.body_radius < 0.95 {
+        0
+    } else if c.phenotype.body_radius > 1.45 {
+        2
+    } else {
+        1
+    };
+    let eye_key = c.phenotype.eye_count.min(4) as u32;
+    diet_key * 100 + size_key * 10 + eye_key
 }
 
 pub struct SpeciesAnalyzer;
@@ -34,25 +60,7 @@ impl SpeciesAnalyzer {
             if !c.is_alive {
                 continue;
             }
-            let diet_key = if c.phenotype.jaw_strength < 0.28 {
-                0
-            } else if c.phenotype.jaw_strength > 0.52 {
-                2
-            } else {
-                1
-            };
-
-            let size_key = if c.phenotype.body_radius < 0.95 {
-                0
-            } else if c.phenotype.body_radius > 1.45 {
-                2
-            } else {
-                1
-            };
-
-            let eye_key = c.phenotype.eye_count.min(4) as u32;
-
-            let cluster_id = diet_key * 100 + size_key * 10 + eye_key;
+            let cluster_id = cluster_of(c);
             clusters.entry(cluster_id).or_default().push(c);
         }
 
@@ -95,12 +103,10 @@ impl SpeciesAnalyzer {
             let avg_armor = sum_armor / c_f;
             let avg_hue = sum_hue / c_f;
 
-            let (diet_label, name_suffix) = if avg_jaw < 0.28 {
-                ("Травоядный", "Grazer")
-            } else if avg_jaw > 0.52 {
-                ("Хищник", "Stalker")
-            } else {
-                ("Всеядный", "Forager")
+            let (diet_label, name_suffix) = match diet_of(avg_jaw) {
+                0 => ("Травоядный", "Grazer"),
+                2 => ("Хищник", "Stalker"),
+                _ => ("Всеядный", "Forager"),
             };
 
             let name_prefix = if avg_radius > 1.4 {
@@ -133,6 +139,7 @@ impl SpeciesAnalyzer {
                 avg_eyes,
                 avg_armor,
                 max_generation: max_gen,
+                cluster: cluster_id,
             });
         }
 

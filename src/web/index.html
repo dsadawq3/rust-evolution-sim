@@ -2,1658 +2,2122 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>AI Evolution Simulator 3D (Rust Engine 2.0)</title>
+  <title>Обсерватория блёбов</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,560;0,9..144,680;1,9..144,520&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      user-select: none;
+    :root {
+      --ink: #090807;
+      --soil: rgba(18, 15, 12, 0.82);
+      --line: rgba(243, 236, 223, 0.14);
+      --paper: #f4eee4;
+      --muted: #a89c8d;
+      --moss: #d6f58a;
+      --gold: #f0c36a;
+      --blood: #ff8fa3;
+      --spore: #e2b6ff;
+      --sky: #b7d4ea;
+      --shadow: 0 22px 60px rgba(0, 0, 0, 0.42);
+      --sans: "Outfit", "Avenir Next", "Segoe UI", sans-serif;
+      --serif: "Fraunces", "Iowan Old Style", Palatino, Georgia, serif;
     }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    html, body { margin: 0; height: 100%; background: var(--ink); color: var(--paper); }
     body {
-      background: #0d1117;
-      color: #f1f5f9;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      overflow: hidden;
-      width: 100vw;
-      height: 100vh;
+      font-family: var(--sans);
       font-size: 14px;
-    }
-    #canvas-container {
-      width: 100%;
-      height: 100%;
-      position: absolute;
-      top: 0;
-      left: 0;
-      z-index: 1;
-    }
-
-    /* Connection Shield */
-    #connection-shield {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(10, 14, 20, 0.88);
-      backdrop-filter: blur(16px);
-      z-index: 9999;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      transition: opacity 0.25s ease, visibility 0.25s ease;
-    }
-    #connection-shield.hidden {
-      opacity: 0;
-      visibility: hidden;
-      pointer-events: none;
-    }
-    .shield-box {
-      background: #18202c;
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      padding: 36px 46px;
-      border-radius: 20px;
-      text-align: center;
-      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.8);
-      max-width: 480px;
-    }
-    .spinner {
-      width: 48px;
-      height: 48px;
-      border: 4px solid #334155;
-      border-top-color: #22c55e;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin: 0 auto 20px auto;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* UI Layout */
-    .hud {
-      position: absolute;
-      z-index: 10;
-      pointer-events: none;
-    }
-    .interactive {
-      pointer-events: auto;
-    }
-
-    /* Top Bar */
-    .top-bar {
-      top: 16px;
-      left: 20px;
-      right: 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 16px;
-    }
-    .brand-card {
-      background: rgba(18, 24, 34, 0.94);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      backdrop-filter: blur(14px);
-      padding: 9px 18px;
-      border-radius: 14px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      box-shadow: 0 10px 35px rgba(0, 0, 0, 0.5);
-    }
-    .brand-title {
-      font-size: 17px;
-      font-weight: 800;
-      color: #4ade80;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      letter-spacing: 0.5px;
-    }
-
-    .btn-nav {
-      background: #1e293b;
-      border: 1px solid #475569;
-      color: #f8fafc;
-      padding: 8px 16px;
-      font-size: 13px;
-      font-weight: 700;
-      border-radius: 10px;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-      transition: all 0.15s ease;
-    }
-    .btn-nav:hover {
-      background: #334155;
-      border-color: #64748b;
-      transform: translateY(-1px);
-    }
-    .btn-nav.menu-btn {
-      background: #15803d;
-      border-color: #22c55e;
-      color: #ffffff;
-      box-shadow: 0 4px 14px rgba(34, 197, 94, 0.35);
-    }
-    .btn-nav.menu-btn:hover {
-      background: #166534;
-      border-color: #4ade80;
-    }
-
-    /* Controls Header */
-    .controls-card {
-      background: rgba(18, 24, 34, 0.94);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      backdrop-filter: blur(14px);
-      padding: 8px 14px;
-      border-radius: 14px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      box-shadow: 0 10px 35px rgba(0, 0, 0, 0.5);
-    }
-    .btn {
-      background: #1e293b;
-      border: 1px solid #334155;
-      color: #f1f5f9;
-      padding: 7px 12px;
-      font-size: 13px;
-      font-weight: 700;
-      border-radius: 8px;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      transition: all 0.15s ease;
-    }
-    .btn:hover {
-      background: #334155;
-      border-color: #475569;
-    }
-    .btn.active {
-      background: #16a34a;
-      border-color: #4ade80;
-      color: #fff;
-    }
-    .btn.danger {
-      border-color: rgba(239, 68, 68, 0.5);
-      color: #fca5a5;
-    }
-    .btn.danger:hover {
-      background: #dc2626;
-      color: #fff;
-    }
-    .btn.special {
-      border-color: rgba(234, 179, 8, 0.5);
-      color: #fde047;
-    }
-    .btn.special:hover {
-      background: #ca8a04;
-      color: #fff;
-    }
-
-    /* Left Drawer Panel */
-    .drawer-panel {
-      top: 76px;
-      left: 20px;
-      bottom: 56px;
-      width: 440px;
-      background: rgba(18, 24, 34, 0.94);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      backdrop-filter: blur(16px);
-      border-radius: 16px;
-      display: flex;
-      flex-direction: column;
       overflow: hidden;
-      box-shadow: 0 16px 45px rgba(0, 0, 0, 0.6);
+      -webkit-font-smoothing: antialiased;
     }
-    .tabs-header {
-      display: flex;
-      background: #0f172a;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-      padding: 4px;
-      gap: 4px;
+    button, input, select { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible, select:focus-visible {
+      outline: 2px solid var(--moss);
+      outline-offset: 2px;
     }
-    .tab-btn {
-      flex: 1;
-      padding: 10px 8px;
-      background: none;
-      border: none;
-      color: #94a3b8;
-      font-size: 13px;
-      font-weight: 700;
-      cursor: pointer;
-      text-align: center;
-      border-radius: 8px;
-      transition: all 0.15s ease;
+    #stage { position: fixed; inset: 0; z-index: 1; }
+    .vignette {
+      position: fixed; inset: 0; z-index: 2; pointer-events: none;
+      background: radial-gradient(ellipse at center, transparent 42%, rgba(0, 0, 0, 0.45) 100%);
     }
-    .tab-btn:hover {
-      color: #f8fafc;
+    body.is-clean .chrome { display: none !important; }
+
+    .glass {
+      background: var(--soil);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+
+    .tools {
+      position: fixed; top: 14px; right: 14px; z-index: 12;
+      display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; max-width: min(640px, calc(100vw - 420px));
+    }
+    .tool, .dock button, .text-btn, .seg button {
+      border: 1px solid var(--line);
       background: rgba(255, 255, 255, 0.04);
-    }
-    .tab-btn.active {
-      color: #4ade80;
-      background: rgba(74, 222, 128, 0.12);
-    }
-    .tab-content {
-      flex: 1;
-      padding: 18px 20px;
-      overflow-y: auto;
-      display: none;
-    }
-    .tab-content.active { display: block; }
-
-    .stat-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 13px;
-      padding: 6px 0;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    }
-    .stat-label { color: #94a3b8; font-weight: 500; }
-    .stat-val { font-weight: 700; color: #f8fafc; font-size: 14px; font-variant-numeric: tabular-nums; }
-    .stat-val.green { color: #4ade80; }
-    .stat-val.red { color: #f87171; }
-    .stat-val.yellow { color: #facc15; }
-    .stat-val.blue { color: #60a5fa; }
-
-    /* Chart Containers */
-    .chart-box {
-      background: #0b0f17;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 12px;
-      padding: 12px;
-      margin-top: 14px;
-      position: relative;
-    }
-    .chart-title {
-      font-size: 12px;
-      font-weight: 700;
-      color: #cbd5e1;
-      margin-bottom: 8px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    /* Species Card */
-    .species-card {
-      background: #0f172a;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 12px;
-      padding: 12px 14px;
-      margin-bottom: 10px;
-    }
-    .species-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
-    }
-    .species-name {
-      font-weight: 800;
-      font-size: 14px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .species-pill {
-      font-size: 11px;
-      padding: 3px 8px;
-      border-radius: 6px;
-      font-weight: 700;
-    }
-    .pill-herb { background: rgba(34, 197, 94, 0.22); color: #4ade80; }
-    .pill-carn { background: rgba(239, 68, 68, 0.22); color: #f87171; }
-    .pill-omni { background: rgba(168, 85, 247, 0.22); color: #c084fc; }
-
-    /* Right Creature Inspector */
-    .inspector-panel {
-      top: 76px;
-      right: 20px;
-      width: 380px;
-      background: rgba(18, 24, 34, 0.94);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      backdrop-filter: blur(16px);
-      border-radius: 16px;
-      padding: 20px;
-      box-shadow: 0 16px 45px rgba(0, 0, 0, 0.65);
-      display: none;
-    }
-    .inspector-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 14px;
-      padding-bottom: 10px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    }
-    .inspector-title { font-size: 16px; font-weight: 800; color: #4ade80; }
-    .close-btn { background: none; border: none; color: #94a3b8; font-size: 24px; cursor: pointer; line-height: 1; }
-    .close-btn:hover { color: #fff; }
-
-    .progress-bar { height: 8px; background: #334155; border-radius: 4px; overflow: hidden; margin-top: 4px; }
-    .progress-fill { height: 100%; border-radius: 4px; transition: width 0.15s ease; }
-    .bg-green { background: #22c55e; }
-    .bg-yellow { background: #eab308; }
-    .bg-blue { background: #3b82f6; }
-
-    /* Neural Brain Net */
-    .brain-box {
-      margin-top: 14px;
-      background: #0f172a;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 10px;
-      padding: 12px;
-    }
-    .brain-title { font-size: 12px; font-weight: 700; color: #94a3b8; margin-bottom: 8px; }
-    .neuron-grid {
-      display: grid;
-      grid-template-columns: repeat(8, 1fr);
-      gap: 6px;
-    }
-    .neuron {
-      width: 14px;
-      height: 14px;
-      border-radius: 4px;
-      background: #334155;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    /* Bottom Log Ticker */
-    .ticker {
-      bottom: 16px;
-      left: 20px;
-      right: 20px;
-      background: rgba(18, 24, 34, 0.94);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      backdrop-filter: blur(14px);
-      padding: 9px 18px;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-size: 13px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-    }
-    .ticker-tag {
-      font-size: 11px;
-      font-weight: 800;
-      padding: 3px 8px;
-      border-radius: 6px;
-      background: #1e293b;
-      color: #38bdf8;
-      border: 1px solid #334155;
-    }
-    .ticker-msg { color: #cbd5e1; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; }
-
-    /* Modals & Fullscreen Menus */
-    .modal-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(8, 12, 18, 0.85);
-      backdrop-filter: blur(12px);
-      z-index: 1000;
-      display: none;
-      align-items: center;
-      justify-content: center;
-    }
-    .modal-box {
-      background: #141b26;
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      border-radius: 20px;
-      width: 720px;
-      max-width: 94vw;
-      max-height: 90vh;
-      padding: 28px;
-      overflow-y: auto;
-      box-shadow: 0 24px 75px rgba(0, 0, 0, 0.9);
-      position: relative;
-    }
-    .modal-box h2 {
-      font-size: 20px;
-      font-weight: 800;
-      margin-bottom: 20px;
-      color: #4ade80;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .form-group { margin-bottom: 16px; }
-    .form-group label {
-      display: flex;
-      justify-content: space-between;
-      font-size: 13px;
+      color: var(--paper);
+      border-radius: 999px;
+      padding: 8px 12px;
       font-weight: 600;
-      color: #cbd5e1;
-      margin-bottom: 6px;
+      letter-spacing: 0.01em;
     }
-    .form-group input[type="text"], .form-group select {
-      width: 100%;
-      padding: 10px 14px;
-      background: #0b0f17;
-      border: 1px solid #334155;
-      border-radius: 8px;
-      color: #fff;
-      font-size: 14px;
-      outline: none;
-      transition: border-color 0.15s ease;
+    .tool.on, .seg button.on, .dock button.on {
+      background: var(--moss);
+      color: #18210d;
+      border-color: transparent;
     }
-    .form-group input[type="text"]:focus, .form-group select:focus {
-      border-color: #4ade80;
-    }
-    .form-group input[type="range"] {
-      width: 100%;
-      height: 6px;
-      background: #334155;
-      border-radius: 3px;
-      outline: none;
-      cursor: pointer;
-      accent-color: #4ade80;
-    }
-    .slider-val { font-weight: 800; color: #4ade80; font-size: 14px; }
-    .modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
+    .tool.accent { background: #243018; border-color: rgba(214, 245, 138, 0.45); color: var(--moss); }
+    .tool:hover, .dock button:hover, .text-btn:hover, .seg button:hover { border-color: rgba(244, 238, 228, 0.35); }
 
-    /* Sim Card Item */
+    .atlas {
+      position: fixed; top: 14px; left: 14px; z-index: 8;
+      width: 372px; max-height: calc(100vh - 28px);
+      border-radius: 22px; display: flex; flex-direction: column; overflow: hidden;
+    }
+    .atlas-head, .dossier-head {
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+      padding: 16px 16px 10px;
+    }
+    .mark {
+      width: 34px; height: 28px; border-radius: 50% 50% 46% 54%;
+      background: radial-gradient(circle at 35% 30%, #f7ffe8, #9bc45a 46%, #243018 78%);
+      box-shadow: inset 0 -6px 10px rgba(0,0,0,.25);
+      position: relative; flex: none;
+    }
+    .mark i, .mark b {
+      position: absolute; top: 9px; width: 7px; height: 7px; border-radius: 50%; background: #fffaf3;
+    }
+    .mark i { left: 7px; } .mark b { right: 7px; }
+    .mark i::after, .mark b::after {
+      content: ""; position: absolute; width: 3px; height: 3px; border-radius: 50%; background: #1a120c; top: 2px; left: 2px;
+    }
+    .brand { display: flex; gap: 10px; align-items: center; }
+    .brand strong { display: block; font-family: var(--serif); font-size: 18px; font-weight: 560; letter-spacing: -0.03em; }
+    .brand em { display: block; margin-top: 1px; font-style: normal; color: var(--muted); font-size: 12px; }
+    .icon-x {
+      width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--line);
+      background: transparent; color: var(--paper); font-size: 20px; line-height: 1;
+    }
+    .vitals { padding: 0 16px 12px; }
+    .vital-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }
+    .vital-pop { font-family: var(--serif); font-size: 46px; line-height: 0.9; font-weight: 560; letter-spacing: -0.04em; }
+    .vital-pop span:last-child { display: block; margin-top: 4px; font-family: var(--sans); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+    button.chip { border: 0; }
+    .vital-side { text-align: right; color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .vital-side b { color: var(--paper); font-weight: 650; }
+    #spark { width: 100%; height: 36px; display: block; margin-top: 8px; }
+    .mix { display: flex; height: 7px; border-radius: 99px; overflow: hidden; background: rgba(255,255,255,0.06); margin-top: 10px; }
+    .mix i { display: block; height: 100%; }
+    .mix i.herb { background: var(--moss); } .mix i.omni { background: var(--spore); } .mix i.carn { background: var(--blood); }
+    .mix-label, .narration, .quiet { color: var(--muted); font-size: 12px; }
+    .narration {
+      font-family: var(--serif); font-style: italic; font-weight: 520; font-size: 16px;
+      color: var(--paper); line-height: 1.35; margin: 10px 0 0; min-height: 2.7em;
+    }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .chip {
+      font-size: 12px; font-weight: 650; padding: 4px 8px; border-radius: 99px;
+      background: rgba(226, 182, 255, 0.14); color: var(--spore);
+    }
+    .chip.moss { background: rgba(214, 245, 138, 0.12); color: var(--moss); }
+    .tabs { display: flex; gap: 4px; padding: 0 12px 8px; }
+    .tabs button {
+      flex: 1; border: 0; background: transparent; color: var(--muted);
+      border-radius: 10px; padding: 8px 4px; font-weight: 650; font-size: 12px;
+    }
+    .tabs button.on { background: rgba(214, 245, 138, 0.12); color: var(--moss); }
+    .atlas-body { overflow: auto; padding: 0 16px 16px; }
+    .atlas.is-collapsed { width: 320px; }
+    .atlas.is-collapsed .atlas-body, .atlas.is-collapsed .tabs { display: none; }
+    .facts { display: grid; grid-template-columns: 1fr auto; gap: 7px 12px; margin: 0; }
+    .facts dt { color: var(--muted); } .facts dd { margin: 0; font-variant-numeric: tabular-nums; font-weight: 650; text-align: right; }
+    .split { display: flex; gap: 8px; margin: 12px 0; }
+    .text-btn.grow { flex: 1; }
+    .seek { display: flex; gap: 6px; margin-top: 12px; }
+    .seek button { flex: 1; }
+    .legend { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; color: var(--muted); font-size: 12px; }
+    .legend b { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
+    .specimen {
+      display: grid; grid-template-columns: 8px 1fr; margin-bottom: 8px;
+      background: rgba(255,255,255,0.03); border-radius: 14px; overflow: hidden; border: 1px solid transparent;
+      text-align: left; width: 100%; padding: 0;
+    }
+    .specimen.lit { border-color: rgba(214, 245, 138, 0.7); }
+    .specimen .thread { background: var(--c, var(--moss)); }
+    .specimen .body { padding: 10px 12px 10px 10px; }
+    .specimen .top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+    .specimen .top strong { font-size: 14px; }
+    .pill { font-size: 11px; font-weight: 700; padding: 3px 7px; border-radius: 99px; }
+    .pill.herb { background: rgba(214,245,138,.15); color: var(--moss); }
+    .pill.omni { background: rgba(226,182,255,.16); color: var(--spore); }
+    .pill.carn { background: rgba(255,143,163,.16); color: var(--blood); }
+    .spec-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 8px; margin-top: 6px; color: var(--muted); font-size: 12px; }
+    .spec-meta b { color: var(--paper); font-weight: 650; }
+    .popbar { height: 3px; border-radius: 99px; background: rgba(255,255,255,.08); margin-top: 8px; }
+    .popbar i { display: block; height: 100%; background: var(--c, var(--moss)); border-radius: 99px; }
+    .chart-card { margin-top: 12px; padding: 10px; border-radius: 14px; background: rgba(0,0,0,.22); }
+    .chart-card header { display: flex; justify-content: space-between; color: var(--muted); font-size: 12px; font-weight: 650; margin-bottom: 6px; }
+    .chart-card .plot { height: 150px; position: relative; }
+    .journal-item { padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.06); }
+    .journal-item .lv { font-size: 10px; font-weight: 750; letter-spacing: 0.08em; color: var(--gold); }
+    .journal-item.warn .lv { color: var(--danger); }
+    .journal-item.mutation .lv, .journal-item.story .lv { color: var(--spore); }
+    .journal-item p { margin: 3px 0 0; line-height: 1.4; }
+
+    .dossier {
+      position: fixed; top: 62px; right: 14px; z-index: 9; width: 352px;
+      max-height: calc(100vh - 230px); overflow: auto; border-radius: 22px; padding-bottom: 14px;
+    }
+    .kicker { margin: 0; letter-spacing: 0.12em; text-transform: uppercase; font-size: 11px; color: var(--moss); font-weight: 700; }
+    .dossier h2 { margin: 2px 0 0; font-family: var(--serif); font-weight: 560; font-size: 28px; letter-spacing: -0.03em; }
+    .sub { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+    #portrait { width: calc(100% - 28px); height: 104px; margin: 4px 14px 8px; display: block; }
+    .meter { padding: 0 16px; margin-bottom: 8px; }
+    .meter .row { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+    .meter .row b { color: var(--paper); font-variant-numeric: tabular-nums; }
+    .track { height: 6px; border-radius: 99px; background: rgba(255,255,255,.08); margin-top: 4px; overflow: hidden; }
+    .track i { display: block; height: 100%; width: 0; border-radius: 99px; }
+    .track.nrg i { background: var(--gold); } .track.hp i { background: var(--moss); } .track.age i { background: var(--sky); }
+    .dossier .facts { padding: 6px 16px 0; }
+    .acts { display: flex; gap: 6px; padding: 10px 16px 0; }
+    .acts span { font-size: 11px; font-weight: 700; padding: 4px 8px; border-radius: 99px; background: rgba(255,255,255,.05); color: var(--muted); }
+    .acts span.on { background: rgba(214,245,138,.16); color: var(--moss); }
+    .acts span.hot { background: rgba(255,143,163,.18); color: var(--blood); }
+    #brain-canvas { width: calc(100% - 28px); height: 176px; margin: 10px 14px 0; border-radius: 12px; background: #100e0c; display: block; }
+    .dossier .split { padding: 0 16px; }
+
+    .dock {
+      position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%);
+      z-index: 10; display: flex; align-items: center; gap: 6px;
+      padding: 7px; border-radius: 999px; max-width: calc(100vw - 24px); overflow: auto;
+    }
+    .dock button.danger.armed { background: #c4532a; color: white; border-color: transparent; }
+    .seg { display: flex; padding: 2px; border-radius: 999px; background: rgba(0,0,0,.28); }
+    .seg button { border: 0; background: transparent; }
+    .dock-gap { width: 1px; height: 22px; background: var(--line); margin: 0 2px; }
+
+    .map-card {
+      position: fixed; right: 14px; bottom: 16px; z-index: 8; width: 188px;
+      border-radius: 18px; padding: 10px;
+    }
+    .map-card header { display: flex; justify-content: space-between; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 700; margin-bottom: 6px; }
+    #map-canvas { width: 168px; height: 168px; border-radius: 12px; display: block; cursor: crosshair; background: #14110e; }
+
+    .nameplate {
+      position: fixed; z-index: 7; pointer-events: none; transform: translate(-50%, -130%);
+      padding: 6px 10px; border-radius: 999px; background: rgba(12,10,8,.82);
+      border: 1px solid var(--line); font-size: 12px; font-weight: 650; white-space: nowrap;
+    }
+    .nameplate small { color: var(--muted); font-weight: 500; margin-left: 6px; }
+
+    .toasts { position: fixed; top: 64px; left: 50%; transform: translateX(-50%); z-index: 30; display: flex; flex-direction: column; gap: 8px; width: min(460px, calc(100vw - 40px)); pointer-events: none; }
+    .toast {
+      pointer-events: auto; padding: 10px 14px; border-radius: 14px;
+      background: rgba(18,15,12,.92); border: 1px solid var(--line); box-shadow: var(--shadow);
+      animation: rise .35s ease;
+    }
+    .toast b { display: block; font-size: 10px; letter-spacing: 0.1em; color: var(--gold); }
+    .toast p { margin: 3px 0 0; }
+    .toast.out { opacity: 0; transform: translateY(-6px); transition: .35s ease; }
+
+    .reveal {
+      position: fixed; left: 14px; bottom: 16px; z-index: 14;
+      border-radius: 999px; padding: 10px 14px; background: var(--moss); color: #18210d; border: 0; font-weight: 700;
+    }
+
+    .link-bar {
+      position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 13;
+      padding: 8px 14px; border-radius: 999px; color: var(--gold);
+    }
+
+    .veil {
+      position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center;
+      background: rgba(9, 8, 7, 0.72); backdrop-filter: blur(10px); transition: opacity .4s ease, visibility .4s;
+    }
+    .veil.is-gone { opacity: 0; visibility: hidden; pointer-events: none; }
+    .veil-card { width: min(560px, calc(100vw - 32px)); text-align: left; padding: 28px 28px 22px; border-radius: 28px; }
+    .blob {
+      width: 148px; height: 112px; margin-bottom: 18px; position: relative;
+      border-radius: 50% 50% 46% 54% / 60% 46% 54% 40%;
+      background: radial-gradient(circle at 32% 28%, #f7ffe8, #b6d86a 40%, #31421c 74%);
+      animation: breathe 4.8s ease-in-out infinite; box-shadow: 0 20px 40px rgba(0,0,0,.35);
+    }
+    .blob span { position: absolute; top: 38px; width: 18px; height: 18px; background: #fffaf3; border-radius: 50%; }
+    .blob span:first-child { left: 34px; } .blob span:last-child { right: 34px; }
+    .blob span i { display: block; width: 8px; height: 8px; margin: 5px 0 0 6px; background: #1a120c; border-radius: 50%; }
+    .eyebrow { letter-spacing: 0.16em; text-transform: uppercase; color: var(--moss); font-size: 12px; font-weight: 700; margin: 0 0 8px; }
+    .veil h1 { font-family: var(--serif); font-weight: 560; font-size: 42px; line-height: 1.02; letter-spacing: -0.04em; margin: 0 0 12px; }
+    .lede { color: #ddd4c6; line-height: 1.5; margin: 0 0 18px; }
+    .veil-go {
+      background: var(--moss); color: #18210d; border: 0; border-radius: 999px;
+      padding: 12px 18px; font-weight: 750; font-size: 15px;
+    }
+    .veil-go:disabled { opacity: 0.45; cursor: wait; }
+    .veil-status { color: var(--muted); margin: 12px 0 0; font-size: 13px; }
+
+    .modal {
+      position: fixed; inset: 0; z-index: 24; display: flex; align-items: center; justify-content: center;
+      background: rgba(6, 5, 4, 0.72); backdrop-filter: blur(8px); padding: 18px;
+    }
+    .sheet { width: min(720px, 100%); max-height: min(88vh, 860px); overflow: auto; border-radius: 24px; padding: 22px; }
+    .sheet.narrow { width: min(520px, 100%); }
+    .sheet h2 { font-family: var(--serif); font-weight: 560; font-size: 30px; margin: 0 0 6px; letter-spacing: -0.03em; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .sheet .quiet { margin-bottom: 14px; }
+    .tabs.inset { padding: 0 0 14px; }
+    .field { margin-bottom: 14px; }
+    .field label { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; color: #ddd4c6; margin-bottom: 6px; }
+    .field .val { color: var(--moss); font-weight: 750; }
+    .field input[type="text"], .field select {
+      width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line);
+      background: #100e0c; color: var(--paper);
+    }
+    .field input[type="range"] { width: 100%; accent-color: #b6d86a; }
     .sim-card {
-      background: #0b0f17;
-      border: 1px solid #334155;
-      border-radius: 12px;
-      padding: 14px 16px;
-      margin-bottom: 10px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      transition: border-color 0.15s ease;
+      display: flex; justify-content: space-between; gap: 12px; align-items: center;
+      padding: 12px; border-radius: 14px; background: rgba(255,255,255,.03); margin-bottom: 8px;
+      border: 1px solid transparent;
     }
-    .sim-card:hover { border-color: #475569; }
-    .sim-card.active { border-color: #4ade80; background: rgba(74, 222, 128, 0.08); }
-    .sim-name { font-weight: 800; font-size: 15px; color: #f8fafc; }
-    .sim-meta { font-size: 12px; color: #94a3b8; margin-top: 4px; }
+    .sim-card.on { border-color: rgba(214,245,138,.55); }
+    .sim-card b { display: block; }
+    .sim-card span { color: var(--muted); font-size: 12px; }
+    .row-actions { display: flex; gap: 8px; align-items: center; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+    .keys { display: grid; grid-template-columns: 120px 1fr; gap: 6px 10px; margin-top: 8px; }
+    .keys kbd { font-family: var(--sans); color: var(--moss); font-weight: 700; }
+    .warnbox { background: rgba(0,0,0,.25); border-radius: 12px; padding: 12px; color: #ddd4c6; line-height: 1.5; }
 
-    .btn-return {
-      background: #334155;
-      border: 1px solid #475569;
-      color: #fff;
-      padding: 8px 16px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 13px;
-      font-weight: 700;
-      transition: all 0.15s ease;
+    @keyframes breathe { 50% { transform: translateY(4px) scale(1.03, 0.97); } }
+    @keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+    @media (max-width: 980px) {
+      .tools { max-width: calc(100vw - 28px); }
+      .atlas { width: min(372px, calc(100vw - 28px)); max-height: 46vh; }
+      .dossier { left: 14px; width: auto; max-height: 42vh; top: auto; bottom: 78px; }
+      .map-card { display: none; }
     }
-    .btn-return:hover {
-      background: #475569;
+    @media (prefers-reduced-motion: reduce) {
+      .blob, .toast { animation: none; }
     }
   </style>
 </head>
 <body>
-  <!-- Connection Shield -->
-  <div id="connection-shield">
-    <div class="shield-box">
-      <div class="spinner"></div>
-      <h3 style="margin-bottom: 10px; color: #f8fafc; font-size: 18px; font-weight: 800;">Подключение к Rust Engine...</h3>
-      <p style="font-size: 13px; color: #94a3b8; line-height: 1.5;">Ожидание веб-сокета ядра симулятора (ws://127.0.0.1:7890/ws). Интерфейс защищен от сбоев.</p>
+  <div id="stage"></div>
+  <div class="vignette"></div>
+
+  <div id="veil">
+    <div class="veil-card glass">
+      <div class="blob" aria-hidden="true"><span><i></i></span><span><i></i></span></div>
+      <p class="eyebrow">обсерватория</p>
+      <h1>Луг, который учится сам</h1>
+      <p class="lede">У блёбов нет сценария. В каждой голове непрерывная сеть с памятью: глаза, голод, запах травы, запах крови и запах чужого тела. Зубы, шипы и лишние глаза появляются сами, если с ними легче не умереть.</p>
+      <button id="veil-go" class="veil-go" type="button" disabled>Открыть луг</button>
+      <p class="veil-status" id="veil-status">Ищем движок…</p>
     </div>
   </div>
+  <div id="link-bar" class="link-bar glass" hidden>Связь с лугом прервалась. Подключаюсь снова.</div>
 
-  <div id="canvas-container"></div>
-
-  <!-- Top Bar -->
-  <div class="hud top-bar">
-    <div class="brand-card interactive">
-      <button class="btn-nav menu-btn" id="btn-open-launcher">🏠 Главное Меню</button>
-      <div class="brand-title">🧬 BLOB EVO SIM</div>
-      <button class="btn-nav" id="btn-open-world-config">⚙️ Настройки этого мира</button>
-      <button class="btn-nav" id="btn-open-graphics">🎮 Графика 3D</button>
-      <span style="font-size: 13px; color: #94a3b8;">Мир: <b id="active-sim-badge" style="color:#4ade80;">default</b></span>
+  <aside id="atlas" class="atlas glass chrome">
+    <div class="atlas-head">
+      <div class="brand">
+        <div class="mark" aria-hidden="true"><i></i><b></b></div>
+        <div>
+          <strong>Обсерватория</strong>
+          <em id="world-name">default</em>
+        </div>
+      </div>
+      <button id="atlas-toggle" class="text-btn" type="button">Свернуть</button>
     </div>
-
-    <!-- Intervention Controls -->
-    <div class="hud interactive controls-card">
-      <button class="btn" id="btn-pause">⏸ Пауза</button>
-      <button class="btn active" id="btn-1x">1x</button>
-      <button class="btn" id="btn-5x">5x</button>
-      <button class="btn" id="btn-20x">20x</button>
-      <button class="btn" id="btn-100x">100x</button>
-      <div style="width: 1px; height: 22px; background: rgba(255,255,255,0.15); margin: 0 4px;"></div>
-      <button class="btn" id="btn-food">🌱 +70 Еды</button>
-      <button class="btn" id="btn-meat">🥩 +Мясо</button>
-      <button class="btn special" id="btn-radiation">☢️ Мутации</button>
-      <button class="btn danger" id="btn-meteor">☄️ Метеорит</button>
-      <button class="btn" id="btn-open-reset-confirm" style="border-color: rgba(244,63,94,0.4); color: #fda4af;">🔄 Сброс...</button>
+    <div class="vitals">
+      <div class="vital-row">
+        <div class="vital-pop"><span id="vital-pop">—</span><span>живых</span></div>
+        <div class="vital-side">
+          поколение <b id="vital-gen">—</b><br>
+          <b id="vital-rate">—</b> тиков/с<br>
+          <span id="vital-tick">тик —</span>
+        </div>
+      </div>
+      <canvas id="spark" width="340" height="36"></canvas>
+      <div class="mix" title="Состав популяции"><i class="herb" id="mix-herb"></i><i class="omni" id="mix-omni"></i><i class="carn" id="mix-carn"></i></div>
+      <div class="mix-label" id="mix-label">трава, всеядные, хищники</div>
+      <p class="narration" id="narration">Луг просыпается.</p>
+      <div class="chips">
+        <span class="chip" id="mut-chip" hidden>мутации ×1</span>
+        <button class="chip moss" id="focus-chip" type="button" hidden>снять подсветку</button>
+      </div>
     </div>
+    <div class="tabs">
+      <button type="button" class="on" data-tab="field">Поле</button>
+      <button type="button" data-tab="species">Виды</button>
+      <button type="button" data-tab="charts">Кривые</button>
+      <button type="button" data-tab="journal">Журнал</button>
+    </div>
+    <div class="atlas-body">
+      <section id="tab-field">
+        <dl class="facts">
+          <dt>Рождения</dt><dd id="stat-births">0</dd>
+          <dt>Смерти</dt><dd id="stat-deaths">0</dd>
+          <dt>Голод / старость / охота</dt><dd id="stat-causes">0 / 0 / 0</dd>
+          <dt>Растения / мясо</dt><dd id="stat-food">0 / 0</dd>
+          <dt>Пул энергии</dt><dd id="stat-energy">0</dd>
+          <dt>Глаза / челюсть</dt><dd id="stat-traits">—</dd>
+          <dt>Радиус / скорость</dt><dd id="stat-body">—</dd>
+          <dt>Видов на лугу</dt><dd id="stat-species">0</dd>
+        </dl>
+        <div class="seek">
+          <button class="text-btn" id="btn-seek-jaw" type="button">Зубастый</button>
+          <button class="text-btn" id="btn-seek-age" type="button">Старец</button>
+          <button class="text-btn" id="btn-seek-gen" type="button">Потомок</button>
+        </div>
+        <div class="legend">
+          <span><b style="background:#d6f58a"></b>запах травы</span>
+          <span><b style="background:#ff8fa3"></b>тревога</span>
+          <span><b style="background:#e2b6ff"></b>спаривание</span>
+        </div>
+        <p class="quiet">Запахи стелются по почве. V включает вуаль, L перекрашивает блёбов по диете. Клик по виду оставляет на свету только его.</p>
+        <button class="text-btn" id="btn-config" type="button" style="margin-top:10px">Параметры этого луга</button>
+      </section>
+      <section id="tab-species" hidden>
+        <div id="species-container"></div>
+      </section>
+      <section id="tab-charts" hidden>
+        <div class="chart-card"><header><span>Население и корм</span><span id="chart-status">живьём</span></header><div class="plot"><canvas id="chart-pop"></canvas></div></div>
+        <div class="chart-card"><header><span>Травоядные и хищники</span></header><div class="plot"><canvas id="chart-diet"></canvas></div></div>
+        <div class="chart-card"><header><span>Среднее число глаз</span></header><div class="plot"><canvas id="chart-eyes"></canvas></div></div>
+        <div class="chart-card"><header><span>Сила челюсти</span></header><div class="plot"><canvas id="chart-jaw"></canvas></div></div>
+        <div class="chart-card"><header><span>Радиус тела</span></header><div class="plot"><canvas id="chart-size"></canvas></div></div>
+      </section>
+      <section id="tab-journal" hidden>
+        <div id="journal"></div>
+      </section>
+    </div>
+  </aside>
+
+  <div class="tools chrome">
+    <button class="tool on" id="btn-scent" type="button" title="Вуаль феромонов (V)">Запахи</button>
+    <button class="tool" id="btn-diet" type="button" title="Окраска по диете (L)">Диета</button>
+    <button class="tool" id="btn-top" type="button" title="Вид сверху (C)">Сверху</button>
+    <button class="tool" id="btn-home" type="button" title="Вернуть камеру (R)">Ракурс</button>
+    <button class="tool" id="btn-graphics" type="button">Графика</button>
+    <button class="tool" id="btn-help" type="button">Клавиши</button>
+    <button class="tool" id="btn-hide" type="button" title="Спрятать панели (H)">Кино</button>
+    <button class="tool accent" id="btn-worlds" type="button">Миры</button>
   </div>
 
-  <!-- Left Drawer Panel -->
-  <div class="hud interactive drawer-panel">
-    <div class="tabs-header">
-      <button class="tab-btn active" data-tab="tab-overview">Обзор Мира</button>
-      <button class="tab-btn" data-tab="tab-species">Виды & Геномы</button>
-      <button class="tab-btn" data-tab="tab-charts">Эволюция</button>
-    </div>
-
-    <!-- Tab 1: Overview -->
-    <div class="tab-content active" id="tab-overview">
-      <div class="stat-row"><span class="stat-label">Скорость ядра:</span><span class="stat-val green" id="stat-tps">-- TPS</span></div>
-      <div class="stat-row"><span class="stat-label">Текущий тик:</span><span class="stat-val" id="stat-tick">--</span></div>
-      <div class="stat-row"><span class="stat-label">Живая популяция:</span><span class="stat-val green" id="stat-pop">--</span></div>
-      <div class="stat-row"><span class="stat-label">Травоядные / Хищники:</span><span class="stat-val"><span id="stat-herbs" style="color:#4ade80">0</span> / <span id="stat-carns" style="color:#f87171">0</span></span></div>
-      <div class="stat-row"><span class="stat-label">Растения / Куски мяса:</span><span class="stat-val"><span id="stat-food" style="color:#facc15">0</span> / <span id="stat-meat" style="color:#f472b6">0</span></span></div>
-      <div class="stat-row"><span class="stat-label">Максимальное поколение:</span><span class="stat-val blue" id="stat-gen">--</span></div>
-      <div class="stat-row"><span class="stat-label">Всего рождений / Смертей:</span><span class="stat-val"><span id="stat-births" class="green">0</span> / <span id="stat-deaths" class="red">0</span></span></div>
-      <div class="stat-row"><span class="stat-label">Убито хищниками:</span><span class="stat-val red" id="stat-pred-deaths">0</span></div>
-      <div class="stat-row"><span class="stat-label">Пул биомассы:</span><span class="stat-val" id="stat-energy">-- kcal</span></div>
-
-      <!-- Main Dynamic Chart -->
-      <div class="chart-box">
-        <div class="chart-title">
-          <span>Динамика Популяции & Ресурсов</span>
-          <span style="font-size:11px;color:#94a3b8;" id="chart-pop-status">В реальном времени</span>
-        </div>
-        <div style="height: 240px; position: relative;">
-          <canvas id="chart-pop"></canvas>
-        </div>
+  <aside id="dossier" class="dossier glass chrome" hidden>
+    <div class="dossier-head">
+      <div>
+        <p class="kicker" id="dos-diet">особь</p>
+        <h2 id="dos-name">—</h2>
+        <p class="sub" id="dos-sub"></p>
       </div>
+      <button id="dos-close" class="icon-x" type="button" aria-label="Закрыть">×</button>
     </div>
-
-    <!-- Tab 2: Species & Genomes -->
-    <div class="tab-content" id="tab-species">
-      <div style="font-size: 13px; color: #94a3b8; margin-bottom: 12px; font-weight: 600;">Классифицированные популяции (фенотипический кластеринг):</div>
-      <div id="species-container"></div>
+    <canvas id="portrait" width="320" height="104"></canvas>
+    <div class="meter"><div class="row"><span>Энергия</span><b id="txt-nrg">—</b></div><div class="track nrg"><i id="bar-nrg"></i></div></div>
+    <div class="meter"><div class="row"><span>Здоровье</span><b id="txt-hp">—</b></div><div class="track hp"><i id="bar-hp"></i></div></div>
+    <div class="meter"><div class="row"><span>Возраст</span><b id="txt-age">—</b></div><div class="track age"><i id="bar-age"></i></div></div>
+    <dl class="facts">
+      <dt>Род / поколение</dt><dd id="fact-line">—</dd>
+      <dt>Глаза</dt><dd id="fact-eyes">—</dd>
+      <dt>Челюсть / шипы</dt><dd id="fact-jaw">—</dd>
+      <dt>Скорость / радиус</dt><dd id="fact-speed">—</dd>
+      <dt>Охота / дети</dt><dd id="fact-kills">—</dd>
+      <dt>Трава / мясо съедено</dt><dd id="fact-food">—</dd>
+      <dt>Привередливость</dt><dd id="fact-choosy">—</dd>
+      <dt>Обмен веществ</dt><dd id="fact-meta">—</dd>
+    </dl>
+    <div class="acts" id="dos-acts"></div>
+    <canvas id="brain-canvas"></canvas>
+    <p class="quiet" style="padding: 8px 16px 0">Молодые ищут партнёра, похожего на родителей. К старости планка падает, и редкая мутация успевает уйти в детей.</p>
+    <div class="split">
+      <button class="text-btn grow" id="btn-follow" type="button">Следить</button>
+      <button class="text-btn grow" id="btn-lineage" type="button">Только род</button>
     </div>
+  </aside>
 
-    <!-- Tab 3: Evolution Charts -->
-    <div class="tab-content" id="tab-charts">
-      <div class="chart-box" style="margin-top: 0;">
-        <div class="chart-title"><span>Среднее число глаз на особь</span></div>
-        <div style="height: 140px; position: relative;"><canvas id="chart-eyes"></canvas></div>
-      </div>
-
-      <div class="chart-box">
-        <div class="chart-title"><span>Средняя сила челюсти (Хищность)</span></div>
-        <div style="height: 140px; position: relative;"><canvas id="chart-jaw"></canvas></div>
-      </div>
-
-      <div class="chart-box">
-        <div class="chart-title"><span>Средний радиус тела (Биомасса)</span></div>
-        <div style="height: 140px; position: relative;"><canvas id="chart-size"></canvas></div>
-      </div>
+  <div class="dock glass chrome" id="dock">
+    <button id="btn-pause" type="button" title="Пробел">Пауза</button>
+    <div class="seg" id="speed-seg">
+      <button type="button" data-speed="1">1×</button>
+      <button type="button" data-speed="5">5×</button>
+      <button type="button" data-speed="20">20×</button>
+      <button type="button" data-speed="100">100×</button>
     </div>
+    <span class="dock-gap"></span>
+    <button id="btn-food" type="button">Трава</button>
+    <button id="btn-meat" type="button">Мясо</button>
+    <button id="btn-radiation" type="button">Радиация</button>
+    <button id="btn-meteor" class="danger" type="button">Метеорит</button>
+    <button id="btn-reset" type="button">Сброс</button>
   </div>
 
-  <!-- Right Creature Inspector Panel -->
-  <div class="hud interactive inspector-panel" id="inspector">
-    <div class="inspector-header">
-      <div class="inspector-title" id="insp-name">Особь #--</div>
-      <button class="close-btn" id="insp-close">×</button>
-    </div>
-    <div style="margin-bottom: 10px;">
-      <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:600;"><span>Энергия</span><span id="insp-energy-text">--</span></div>
-      <div class="progress-bar"><div class="progress-fill bg-yellow" id="insp-energy-bar" style="width: 50%;"></div></div>
-    </div>
-    <div style="margin-bottom: 10px;">
-      <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:600;"><span>Здоровье</span><span id="insp-health-text">--</span></div>
-      <div class="progress-bar"><div class="progress-fill bg-green" id="insp-health-bar" style="width: 50%;"></div></div>
-    </div>
-    <div style="margin-bottom: 12px;">
-      <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:600;"><span>Возраст / Предел жизни</span><span id="insp-age-text">--</span></div>
-      <div class="progress-bar"><div class="progress-fill bg-blue" id="insp-age-bar" style="width: 50%;"></div></div>
-    </div>
-
-    <div class="stat-row"><span class="stat-label">Поколение / Линия:</span><span class="stat-val"><span id="insp-gen">--</span> (Род #<span id="insp-lineage">--</span>)</span></div>
-    <div class="stat-row"><span class="stat-label">Число рецепторов (глаз):</span><span class="stat-val" id="insp-eyes">--</span></div>
-    <div class="stat-row"><span class="stat-label">Челюсть / Броня шипов:</span><span class="stat-val"><span id="insp-jaw">--</span> / <span id="insp-spk">--</span></span></div>
-    <div class="stat-row"><span class="stat-label">Скорость / Радиус:</span><span class="stat-val"><span id="insp-speed">--</span> / <span id="insp-radius">--</span></span></div>
-    <div class="stat-row"><span class="stat-label">Убийств / Потомство:</span><span class="stat-val"><span id="insp-kills" class="red">0</span> / <span id="insp-kids" class="green">0</span></span></div>
-    <div class="stat-row"><span class="stat-label">Привередливость к партнеру:</span><span class="stat-val" id="insp-choosiness">--</span></div>
-
-    <div class="brain-box">
-      <div class="brain-title">Нейронная сеть (CTRNN Leaky Neurons)</div>
-      <div class="neuron-grid" id="neuron-container"></div>
-    </div>
-    <div style="margin-top: 14px;">
-      <button class="btn" id="btn-follow" style="width: 100%; justify-content: center; padding: 9px 0;">🎥 Следить камерой</button>
-    </div>
+  <div class="map-card glass chrome">
+    <header><span>Луг</span><span>клик — туда</span></header>
+    <canvas id="map-canvas" width="168" height="168"></canvas>
   </div>
 
-  <!-- Bottom Log Ticker -->
-  <div class="hud ticker">
-    <div class="ticker-tag" id="ticker-tag">ЛОГ</div>
-    <div class="ticker-msg" id="ticker-msg">Подключение к симулятору эволюции...</div>
-  </div>
+  <div id="nameplate" class="nameplate" hidden></div>
+  <div id="toasts" class="toasts"></div>
+  <button id="reveal" class="reveal" type="button" hidden>Показать панели</button>
 
-  <!-- ═══════════════════════════════════════════════════════════════ -->
-  <!-- MODAL 0: MAIN LAUNCHER / WORLDS HUB                             -->
-  <!-- ═══════════════════════════════════════════════════════════════ -->
-  <div class="modal-overlay" id="modal-launcher">
-    <div class="modal-box">
-      <h2>
-        <span>🌍 Хаб Миров и Запуск</span>
-        <button class="btn-return" id="btn-launcher-exit">✖ В симуляцию (Esc)</button>
-      </h2>
-
-      <div class="tabs-header" style="margin-bottom: 20px; border-radius: 10px; overflow: hidden;">
-        <button class="tab-btn active" id="tab-launch-existing">Сохраненные миры</button>
-        <button class="tab-btn" id="tab-launch-new">+ Создать новый мир</button>
+  <div class="modal" id="modal-launcher" hidden>
+    <div class="sheet glass">
+      <h2>Миры <button class="icon-x" id="btn-launcher-exit" type="button" aria-label="Закрыть">×</button></h2>
+      <p class="quiet">Каждый мир хранит свою историю. Войти в другой — значит оставить текущий луг на диске и открыть новый.</p>
+      <div class="tabs inset">
+        <button type="button" class="on" id="tab-launch-existing">Сохранённые</button>
+        <button type="button" id="tab-launch-new">Новый луг</button>
       </div>
-
-      <!-- Tab 1: Saved Worlds List -->
-      <div id="launch-existing-list">
-        <div id="launcher-sim-cards"></div>
-      </div>
-
-      <!-- Tab 2: New World Single Unified Form (No duplicate settings!) -->
-      <div id="launch-new-form" style="display: none;">
-        <div class="form-group">
-          <label><span>Имя папки нового мира:</span></label>
-          <input type="text" id="launcher-sim-name" placeholder="например, nature_2, savannah_1">
-        </div>
-        <div class="form-group">
-          <label><span>Стартовая популяция блёбов:</span> <span class="slider-val" id="val-launch-pop">160</span></label>
-          <input type="range" id="launcher-sim-pop" min="20" max="500" value="160">
-        </div>
-        <div class="form-group">
-          <label><span>Количество растений на старте:</span> <span class="slider-val" id="val-launch-food">450</span></label>
-          <input type="range" id="launcher-sim-food" min="50" max="1500" value="450">
-        </div>
-        <div class="form-group">
-          <label><span>Скорость прироста растений (еды / сек):</span> <span class="slider-val" id="val-launch-food-rate">25.0</span></label>
-          <input type="range" id="launcher-sim-food-rate" min="2.0" max="100.0" step="1.0" value="25.0">
-        </div>
-        <div class="form-group">
-          <label><span>Размер арены мира:</span> <span class="slider-val" id="val-launch-size">300</span></label>
-          <input type="range" id="launcher-sim-size" min="150" max="600" value="300">
-        </div>
-        <div class="form-group">
-          <label><span>Базовый метаболизм (трата энергии):</span> <span class="slider-val" id="val-launch-meta">0.030</span></label>
-          <input type="range" id="launcher-sim-meta" min="0.010" max="0.100" step="0.005" value="0.030">
-        </div>
-        <div class="form-group">
-          <label><span>Множитель мутаций ДНК:</span> <span class="slider-val" id="val-launch-mut">1.0x</span></label>
-          <input type="range" id="launcher-sim-mut" min="0.2" max="6.0" step="0.2" value="1.0">
-        </div>
-        <div class="form-group">
-          <label><span>Режим выживания (Честная природа):</span></label>
+      <div id="launch-existing-list"><div id="launcher-sim-cards"></div></div>
+      <div id="launch-new-form" hidden>
+        <div class="field"><label>Имя</label><input id="launcher-sim-name" type="text" placeholder="роща, камни, ночь"></div>
+        <div class="field"><label>Стартовая популяция <span class="val" id="val-launch-pop">160</span></label><input id="launcher-sim-pop" type="range" min="20" max="500" value="160"></div>
+        <div class="field"><label>Растений на старте <span class="val" id="val-launch-food">450</span></label><input id="launcher-sim-food" type="range" min="50" max="1500" value="450"></div>
+        <div class="field"><label>Прирост травы в секунду <span class="val" id="val-launch-food-rate">25</span></label><input id="launcher-sim-food-rate" type="range" min="2" max="100" step="1" value="25"></div>
+        <div class="field"><label>Размер луга <span class="val" id="val-launch-size">300</span></label><input id="launcher-sim-size" type="range" min="150" max="600" value="300"></div>
+        <div class="field"><label>Базовый обмен <span class="val" id="val-launch-meta">0.030</span></label><input id="launcher-sim-meta" type="range" min="0.010" max="0.100" step="0.005" value="0.030"></div>
+        <div class="field"><label>Множитель мутаций <span class="val" id="val-launch-mut">1×</span></label><input id="launcher-sim-mut" type="range" min="0.2" max="6" step="0.2" value="1"></div>
+        <div class="field"><label>Режим</label>
           <select id="launcher-sim-reseed">
-            <option value="false" selected>Честная природа: Без читов (при вымирании популяция гибнет)</option>
-            <option value="true">Песочница: С подсадкой пионеров при падении ниже 25</option>
+            <option value="false" selected>Честная природа: вымирание окончательно</option>
+            <option value="true">Песочница: подсадка, если осталось меньше 25</option>
           </select>
         </div>
-
-        <div class="modal-actions" style="margin-top: 24px;">
-          <button class="btn active" id="btn-submit-create-sim" style="padding: 12px 28px; font-size: 15px; font-weight: 800;">
-            🚀 Создать и запустить мир
-          </button>
-        </div>
+        <div class="modal-actions"><button class="tool on" id="btn-submit-create-sim" type="button">Создать и открыть</button></div>
       </div>
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════════════════════════════════ -->
-  <!-- MODAL 2: CURRENT WORLD LIVE CONFIG (No duplicates)              -->
-  <!-- ═══════════════════════════════════════════════════════════════ -->
-  <div class="modal-overlay" id="modal-world-config">
-    <div class="modal-box" style="width: 580px;">
-      <h2>
-        <span>⚙️ Настройки текущего мира</span>
-        <button class="close-btn" id="btn-close-world-config">×</button>
-      </h2>
-      <div style="font-size: 13px; color: #94a3b8; margin-bottom: 16px;">
-        Изменение параметров живого мира <b id="cfg-sim-name" style="color:#4ade80;">default</b> в реальном времени:
-      </div>
-
-      <div class="form-group">
-        <label><span>Скорость появления еды (растений / сек):</span> <span class="slider-val" id="val-live-food-rate">25.0</span></label>
-        <input type="range" id="live-food-rate" min="2.0" max="100.0" step="1.0" value="25.0">
-      </div>
-      <div class="form-group">
-        <label><span>Базовый метаболизм (трата энергии):</span> <span class="slider-val" id="val-live-meta">0.030</span></label>
-        <input type="range" id="live-meta" min="0.005" max="0.100" step="0.005" value="0.030">
-      </div>
-      <div class="form-group">
-        <label><span>Множитель мутаций ДНК:</span> <span class="slider-val" id="val-live-mut">1.0x</span></label>
-        <input type="range" id="live-mut" min="0.1" max="5.0" step="0.1" value="1.0">
-      </div>
-      <div class="form-group">
-        <label><span>Режим выживания:</span></label>
+  <div class="modal" id="modal-world-config" hidden>
+    <div class="sheet glass narrow">
+      <h2>Параметры луга <button class="icon-x" id="btn-close-world-config" type="button" aria-label="Закрыть">×</button></h2>
+      <p class="quiet">Живой мир <b id="cfg-sim-name">default</b>. Меняется сразу, без перезапуска.</p>
+      <div class="field"><label>Прирост травы в секунду <span class="val" id="val-live-food-rate">25</span></label><input id="live-food-rate" type="range" min="2" max="100" step="1" value="25"></div>
+      <div class="field"><label>Базовый обмен <span class="val" id="val-live-meta">0.030</span></label><input id="live-meta" type="range" min="0.005" max="0.100" step="0.005" value="0.030"></div>
+      <div class="field"><label>Множитель мутаций <span class="val" id="val-live-mut">1×</span></label><input id="live-mut" type="range" min="0.1" max="8" step="0.1" value="1"></div>
+      <div class="field"><label>Режим</label>
         <select id="live-reseed-toggle">
-          <option value="false">Честная природа (Без читов)</option>
-          <option value="true">Песочница (Подсадка пионеров)</option>
+          <option value="false">Честная природа</option>
+          <option value="true">Песочница с подсадкой</option>
         </select>
       </div>
-
       <div class="modal-actions">
-        <button class="btn" id="btn-cancel-world-config">Отмена</button>
-        <button class="btn active" id="btn-apply-world-config" style="padding: 10px 22px;">💾 Применить изменения</button>
+        <button class="text-btn" id="btn-cancel-world-config" type="button">Отмена</button>
+        <button class="tool on" id="btn-apply-world-config" type="button">Применить</button>
       </div>
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════════════════════════════════ -->
-  <!-- MODAL 3: GRAPHICS SETTINGS                                      -->
-  <!-- ═══════════════════════════════════════════════════════════════ -->
-  <div class="modal-overlay" id="modal-graphics">
-    <div class="modal-box" style="width: 500px;">
-      <h2>
-        <span>🎮 Настройки Графики 3D</span>
-        <button class="close-btn" id="btn-close-graphics">×</button>
-      </h2>
-      <div class="form-group">
-        <label><span>Профиль качества 3D:</span></label>
+  <div class="modal" id="modal-graphics" hidden>
+    <div class="sheet glass narrow">
+      <h2>Графика <button class="icon-x" id="btn-close-graphics" type="button" aria-label="Закрыть">×</button></h2>
+      <div class="field"><label>Качество</label>
         <select id="gfx-preset">
-          <option value="ultra">Ультра (Мягкие тени + 60 FPS)</option>
-          <option value="medium" selected>Средний (Оптимальный)</option>
-          <option value="low">Низкий (Максимальный FPS на слабых ПК)</option>
+          <option value="low">Низкое, для слабой видеокарты</option>
+          <option value="medium" selected>Среднее</option>
+          <option value="ultra">Высокое, мягкие тени</option>
         </select>
       </div>
-      <div class="form-group">
-        <label><span>Динамические тени:</span></label>
+      <div class="field"><label>Тени</label>
         <select id="gfx-shadows">
-          <option value="on" selected>Включены (Красивый мягкий свет)</option>
-          <option value="off">Выключены (Экономия GPU)</option>
+          <option value="on" selected>Включены</option>
+          <option value="off">Выключены</option>
         </select>
       </div>
-      <div class="modal-actions">
-        <button class="btn active" id="btn-apply-graphics" style="padding: 10px 22px;">Сохранить и закрыть</button>
-      </div>
+      <div class="modal-actions"><button class="tool on" id="btn-apply-graphics" type="button">Сохранить</button></div>
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════════════════════════════════ -->
-  <!-- MODAL 4: SAFE RESET CONFIRMATION                                -->
-  <!-- ═══════════════════════════════════════════════════════════════ -->
-  <div class="modal-overlay" id="modal-confirm-reset">
-    <div class="modal-box" style="width: 520px;">
-      <h2 style="color: #f87171;">
-        <span>⚠️ Подтверждение сброса мира</span>
-        <button class="close-btn" id="btn-cancel-reset-x">×</button>
-      </h2>
-      <div style="font-size: 14px; line-height: 1.6; color: #cbd5e1; margin-bottom: 20px;">
-        Вы действительно хотите сбросить текущую симуляцию <b id="reset-sim-target" style="color:#4ade80;">default</b>?
-        <div style="background: #0b0f17; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 14px; margin-top: 12px; font-size: 13px;">
-          • Детальные логи (<code style="color:#38bdf8;">history.jsonl</code> и <code style="color:#38bdf8;">events.log</code>) будут очищены для нового забега.<br>
-          • <b>Краткая сводка забега</b> (прожитые тики, пик популяции, число поколений) сохранится в <code style="color:#4ade80;">summary.json</code> и архиве.<br>
-          • Мир вернется к стартовой популяции.
-        </div>
+  <div class="modal" id="modal-help" hidden>
+    <div class="sheet glass narrow">
+      <h2>Как смотреть <button class="icon-x" id="btn-close-help" type="button" aria-label="Закрыть">×</button></h2>
+      <div class="keys">
+        <kbd>мышь</kbd><span>левая крутит, правая двигает луг, колесо приближает</span>
+        <kbd>клик</kbd><span>досье особи. Двойной клик — камера держится за ней</span>
+        <kbd>пробел</kbd><span>пауза</span>
+        <kbd>1 2 3 4</kbd><span>скорость 1×, 5×, 20×, 100×</span>
+        <kbd>F</kbd><span>следовать / отпустить</span>
+        <kbd>V / L</kbd><span>запахи / линза диеты</span>
+        <kbd>C / R</kbd><span>вид сверху / обычный ракурс</span>
+        <kbd>H</kbd><span>спрятать панели</span>
+        <kbd>Esc</kbd><span>закрыть верхний слой</span>
       </div>
+      <p class="quiet">Метеорит просит второе нажатие, чтобы случайный клик не стирал три четверти луга. Энергия умерших остаётся мясом.</p>
+    </div>
+  </div>
+
+  <div class="modal" id="modal-confirm-reset" hidden>
+    <div class="sheet glass narrow">
+      <h2>Сбросить луг <button class="icon-x" id="btn-cancel-reset-x" type="button" aria-label="Закрыть">×</button></h2>
+      <div class="warnbox">Мир <b id="reset-sim-target">default</b> начнётся заново. Краткая сводка забега останется в архиве, подробный журнал этого забега очистится.</div>
       <div class="modal-actions">
-        <button class="btn" id="btn-cancel-reset" style="padding: 9px 18px;">❌ Отмена</button>
-        <button class="btn danger" id="btn-do-reset" style="padding: 9px 20px; font-weight: 800;">🗑️ Подтвердить и стереть</button>
+        <button class="text-btn" id="btn-cancel-reset" type="button">Оставить</button>
+        <button class="tool danger" id="btn-do-reset" type="button">Стереть и начать</button>
       </div>
     </div>
   </div>
 
   <script>
-    // --- THREE.JS INITIALIZATION ---
-    const container = document.getElementById('canvas-container');
+    const $ = (id) => document.getElementById(id);
+    const NAMES = ['Мох','Ива','Роса','Клык','Пыль','Уголь','Шёлк','Искра','Тень','Луч','Жар','Лист','Соль','Дым','Медь','Иней','Кора','Зерно','Ржа','Ольха'];
+    const DIET = ['Травоядный', 'Всеядный', 'Хищник'];
+    const store = {
+      get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : v; } catch { return d; } },
+      set(k, v) { try { localStorage.setItem(k, v); } catch { /* private mode */ } }
+    };
+
+    const stage = $('stage');
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0f141c);
-    scene.fog = new THREE.FogExp2(0x0f141c, 0.0018);
-
-    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 2000);
-    camera.position.set(0, 180, 220);
-
-    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    scene.background = new THREE.Color(0x090807);
+    scene.fog = new THREE.FogExp2(0x090807, 0.0021);
+    const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.5, 2400);
+    camera.position.set(40, 180, 230);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    container.appendChild(renderer.domElement);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.08;
+    if (THREE.sRGBEncoding) renderer.outputEncoding = THREE.sRGBEncoding;
+    stage.appendChild(renderer.domElement);
 
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
-    controls.maxPolarAngle = Math.PI / 2 - 0.05;
-    controls.minDistance = 15;
-    controls.maxDistance = 600;
+    controls.dampingFactor = 0.08;
+    controls.maxPolarAngle = Math.PI / 2 - 0.04;
+    controls.minDistance = 8;
+    controls.maxDistance = 980;
+    controls.rotateSpeed = 0.55;
+    controls.zoomSpeed = 0.75;
+    controls.panSpeed = 0.7;
+    controls.screenSpacePanning = false;
+    controls.target.set(0, 0, 0);
 
-    // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
-    scene.add(ambientLight);
+    const hemi = new THREE.HemisphereLight(0xfff4e4, 0x2a2118, 0.78);
+    scene.add(hemi);
+    const sun = new THREE.DirectionalLight(0xfff1d6, 1.12);
+    sun.position.set(90, 210, 50);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(1024, 1024);
+    sun.shadow.bias = -0.00035;
+    sun.shadow.camera.near = 10;
+    sun.shadow.camera.far = 700;
+    scene.add(sun);
+    const fill = new THREE.DirectionalLight(0x8fb4c9, 0.28);
+    fill.position.set(-120, 70, -60);
+    scene.add(fill);
 
-    const dirLight = new THREE.DirectionalLight(0xfffaed, 0.95);
-    dirLight.position.set(120, 250, 100);
-    dirLight.castShadow = true;
-    dirLight.shadow.mapSize.width = 2048;
-    dirLight.shadow.mapSize.height = 2048;
-    dirLight.shadow.camera.near = 10;
-    dirLight.shadow.camera.far = 600;
-    const d = 220;
-    dirLight.shadow.camera.left = -d;
-    dirLight.shadow.camera.right = d;
-    dirLight.shadow.camera.top = d;
-    dirLight.shadow.camera.bottom = -d;
-    dirLight.shadow.bias = -0.0005;
-    scene.add(dirLight);
+    function makeSoil() {
+      const c = document.createElement('canvas');
+      c.width = c.height = 512;
+      const g = c.getContext('2d');
+      g.fillStyle = '#1c1611';
+      g.fillRect(0, 0, 512, 512);
+      for (let i = 0; i < 2200; i++) {
+        g.fillStyle = `rgba(${28 + Math.random() * 36},${22 + Math.random() * 22},${12},${Math.random() * 0.35})`;
+        g.beginPath();
+        g.arc(Math.random() * 512, Math.random() * 512, Math.random() * 16 + 1, 0, 6.283);
+        g.fill();
+      }
+      for (let i = 0; i < 48; i++) {
+        g.fillStyle = `rgba(${60 + Math.random() * 40},${78 + Math.random() * 30},32,${0.04 + Math.random() * 0.07})`;
+        g.beginPath();
+        g.ellipse(Math.random() * 512, Math.random() * 512, 24 + Math.random() * 70, 14 + Math.random() * 28, Math.random() * 3, 0, 6.283);
+        g.fill();
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.anisotropy = 4;
+      return tex;
+    }
+    const soilTex = makeSoil();
+    const floor = new THREE.Mesh(
+      new THREE.PlaneGeometry(1, 1),
+      new THREE.MeshStandardMaterial({ map: soilTex, roughness: 0.96, metalness: 0.02, color: 0xc8b8a2 })
+    );
+    floor.rotation.x = -Math.PI / 2;
+    floor.receiveShadow = true;
+    scene.add(floor);
+    const grid = new THREE.GridHelper(1, 18, 0x3a332b, 0x241e18);
+    grid.position.y = 0.04;
+    scene.add(grid);
 
-    // Arena Floor
-    const floorSize = 600;
-    const gridHelper = new THREE.GridHelper(floorSize, 60, 0x334155, 0x1e293b);
-    gridHelper.position.y = 0.02;
-    scene.add(gridHelper);
-
-    const floorGeo = new THREE.PlaneGeometry(floorSize, floorSize);
-    const floorMat = new THREE.MeshStandardMaterial({
-      color: 0x121824,
-      roughness: 0.85,
-      metalness: 0.1,
+    const scentCanvas = document.createElement('canvas');
+    const scentCtx = scentCanvas.getContext('2d');
+    const scentTex = new THREE.CanvasTexture(scentCanvas);
+    scentTex.magFilter = THREE.LinearFilter;
+    scentTex.minFilter = THREE.LinearFilter;
+    const scentMat = new THREE.MeshBasicMaterial({
+      map: scentTex, transparent: true, depthWrite: false,
+      blending: THREE.AdditiveBlending, opacity: 0.9
     });
-    const floorMesh = new THREE.Mesh(floorGeo, floorMat);
-    floorMesh.rotation.x = -Math.PI / 2;
-    floorMesh.receiveShadow = true;
-    scene.add(floorMesh);
+    const scentMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), scentMat);
+    scentMesh.rotation.x = -Math.PI / 2;
+    scentMesh.position.y = 0.16;
+    scene.add(scentMesh);
 
-    // Geometries & Shared Materials
-    const domeGeo = new THREE.SphereGeometry(1, 24, 16, 0, Math.PI * 2, 0, Math.PI / 2);
-    const eyeScleraGeo = new THREE.SphereGeometry(0.24, 14, 14);
-    const eyePupilGeo = new THREE.SphereGeometry(0.12, 12, 12);
-    const scleraMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2 });
-    const pupilMat = new THREE.MeshBasicMaterial({ color: 0x050505 });
+    const borderGeo = new THREE.BufferGeometry();
+    borderGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(15), 3));
+    const border = new THREE.Line(borderGeo, new THREE.LineBasicMaterial({ color: 0xd6f58a, transparent: true, opacity: 0.55 }));
+    scene.add(border);
 
-    const foodGeo = new THREE.DodecahedronGeometry(0.55, 1);
-    const meatGeo = new THREE.SphereGeometry(1, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2);
-    const meatMat = new THREE.MeshStandardMaterial({ color: 0xf472b6, roughness: 0.35, metalness: 0.05 });
-    const foodMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.3, emissive: 0xca8a04, emissiveIntensity: 0.4 });
+    const domeGeo = new THREE.SphereGeometry(1, 26, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+    const spikeGeo = new THREE.ConeGeometry(0.15, 0.52, 5);
+    const eyeWhiteGeo = new THREE.SphereGeometry(0.2, 12, 12);
+    const pupilGeo = new THREE.SphereGeometry(0.09, 10, 10);
+    const catchGeo = new THREE.SphereGeometry(0.04, 8, 8);
+    const whiteMat = new THREE.MeshStandardMaterial({ color: 0xfff8ee, roughness: 0.28 });
+    const pupilMat = new THREE.MeshBasicMaterial({ color: 0x140e0a });
+    const catchMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const spikeMat = new THREE.MeshStandardMaterial({ color: 0x3a2c22, roughness: 0.42, metalness: 0.18 });
+    const gazeMat = new THREE.MeshBasicMaterial({
+      color: 0xe7ffb0, transparent: true, opacity: 0.13, depthWrite: false, side: THREE.DoubleSide
+    });
 
-    const creatureMeshes = new Map();
-    const foodInstanced = new THREE.InstancedMesh(foodGeo, foodMat, 1600);
-    foodInstanced.castShadow = true; foodInstanced.receiveShadow = true;
-    scene.add(foodInstanced);
-
-    const meatInstanced = new THREE.InstancedMesh(meatGeo, meatMat, 800);
-    meatInstanced.castShadow = true; meatInstanced.receiveShadow = true;
-    scene.add(meatInstanced);
-
+    const foodGeo = new THREE.ConeGeometry(0.42, 1.05, 6);
+    const foodMat = new THREE.MeshStandardMaterial({ color: 0xc6e07a, emissive: 0x5d7a28, emissiveIntensity: 0.55, roughness: 0.55 });
+    const berryGeo = new THREE.SphereGeometry(0.2, 10, 8);
+    const berryMat = new THREE.MeshStandardMaterial({ color: 0xf0c36a, emissive: 0xb8862e, emissiveIntensity: 0.7, roughness: 0.32 });
+    const foodMesh = new THREE.InstancedMesh(foodGeo, foodMat, 1600);
+    const berryMesh = new THREE.InstancedMesh(berryGeo, berryMat, 1600);
+    foodMesh.castShadow = false;
+    foodMesh.count = 0;
+    berryMesh.count = 0;
+    foodMesh.frustumCulled = false;
+    berryMesh.frustumCulled = false;
+    scene.add(foodMesh);
+    scene.add(berryMesh);
+    const meatGeo = new THREE.SphereGeometry(1, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2);
+    const meatMat = new THREE.MeshStandardMaterial({ color: 0xff8fa3, emissive: 0x5a2430, emissiveIntensity: 0.28, roughness: 0.42 });
+    const meatMesh = new THREE.InstancedMesh(meatGeo, meatMat, 800);
+    meatMesh.castShadow = false;
+    meatMesh.count = 0;
+    meatMesh.frustumCulled = false;
+    scene.add(meatMesh);
     const dummy = new THREE.Object3D();
 
-    function createCreatureMesh(cData) {
-      const group = new THREE.Group();
-      const color = new THREE.Color().setHSL(cData.hue, cData.sat, 0.55);
-      const domeMesh = new THREE.Mesh(
-        domeGeo,
-        new THREE.MeshStandardMaterial({ color, roughness: 0.35, metalness: 0.15 })
-      );
-      domeMesh.castShadow = true; domeMesh.receiveShadow = true;
-      domeMesh.name = "dome";
-      group.add(domeMesh);
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(1, 0.045, 8, 42),
+      new THREE.MeshBasicMaterial({ color: 0xf4eee4 })
+    );
+    ring.rotation.x = Math.PI / 2;
+    ring.visible = false;
+    scene.add(ring);
+    const selLight = new THREE.PointLight(0xfff1d0, 0, 26, 2);
+    scene.add(selLight);
+    const shock = new THREE.Mesh(
+      new THREE.RingGeometry(0.85, 1.02, 56),
+      new THREE.MeshBasicMaterial({ color: 0xffb086, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false })
+    );
+    shock.rotation.x = -Math.PI / 2;
+    shock.visible = false;
+    scene.add(shock);
 
-      const eyesGroup = new THREE.Group();
-      eyesGroup.name = "eyes";
-      for (let i = 0; i < cData.eyes.length; i++) {
-        const [azi, ele, range] = cData.eyes[i];
-        const eyeHolder = new THREE.Group();
-        const r = 0.95;
-        const x = r * Math.cos(ele) * Math.sin(azi);
-        const y = r * Math.sin(ele);
-        const z = r * Math.cos(ele) * Math.cos(azi);
-        eyeHolder.position.set(x, y, z);
+    const SPARK_N = 420;
+    const sparkPos = new Float32Array(SPARK_N * 3);
+    const sparkCol = new Float32Array(SPARK_N * 3);
+    const sparkVel = new Float32Array(SPARK_N * 3);
+    const sparkLife = new Float32Array(SPARK_N);
+    for (let i = 0; i < SPARK_N; i++) sparkPos[i * 3 + 1] = -80;
+    const sparkGeo = new THREE.BufferGeometry();
+    sparkGeo.setAttribute('position', new THREE.BufferAttribute(sparkPos, 3));
+    sparkGeo.setAttribute('color', new THREE.BufferAttribute(sparkCol, 3));
+    const sparks = new THREE.Points(sparkGeo, new THREE.PointsMaterial({ size: 0.48, vertexColors: true, transparent: true, opacity: 0.9, depthWrite: false }));
+    scene.add(sparks);
+    let sparkCursor = 0;
 
-        const sclera = new THREE.Mesh(eyeScleraGeo, scleraMat);
-        sclera.castShadow = true;
-        eyeHolder.add(sclera);
+    const creatureMeshes = new Map();
+    const domes = [];
+    let arenaW = 0;
+    let arenaH = 0;
+    let showScent = store.get('blob.scent', '1') !== '0';
+    let dietLens = store.get('blob.diet', '0') === '1';
+    let gfxShadows = store.get('blob.shadows', '1') !== '0';
+    let quality = store.get('blob.quality', 'medium');
+    let follow = false;
+    let selectedId = null;
+    let selectedDead = false;
+    let focusLine = null;
+    let focusCluster = null;
+    let currentSim = 'default';
+    let rememberedSpeed = 1;
+    let worldPaused = false;
+    let seenIds = null;
+    let lastTick = 0;
+    let lastChartTick = 0;
+    let syncingHistory = false;
+    let swallowEvents = true;
+    const seenEventKeys = new Set();
+    let live = [];
+    let foodScratch = [];
+    let hoverId = null;
+    let shockT = 0;
+    let shake = 0;
+    let radPulse = 0;
+    let meteorArm = 0;
+    let bootedMilestones = false;
+    const journal = [];
+    const sparkHist = [];
+    const milestones = new Set(JSON.parse(store.get('blob.milestones', '[]')));
+    let atlasTab = 'field';
 
-        const pupil = new THREE.Mesh(eyePupilGeo, pupilMat);
-        pupil.position.set(0, 0, 0.22);
-        eyeHolder.add(pupil);
+    function layoutArena(w, h) {
+      if (!(w > 0) || !(h > 0)) return;
+      const changed = Math.abs(w - arenaW) > 0.5 || Math.abs(h - arenaH) > 0.5;
+      arenaW = w;
+      arenaH = h;
+      floor.scale.set(w, h, 1);
+      scentMesh.scale.set(w, h, 1);
+      grid.scale.set(w, 1, h);
+      soilTex.repeat.set(Math.max(2, w / 90), Math.max(2, h / 90));
+      const x = w / 2, z = h / 2, y = 0.45;
+      const pts = new Float32Array([-x,y,-z, x,y,-z, x,y,z, -x,y,z, -x,y,-z]);
+      border.geometry.attributes.position.array.set(pts);
+      border.geometry.attributes.position.needsUpdate = true;
+      border.geometry.computeBoundingSphere();
+      const d = Math.max(w, h) * 0.62;
+      sun.shadow.camera.left = -d;
+      sun.shadow.camera.right = d;
+      sun.shadow.camera.top = d;
+      sun.shadow.camera.bottom = -d;
+      sun.shadow.camera.updateProjectionMatrix();
+      scene.fog.density = 1.25 / Math.max(w, h);
+      if (changed) frameArena();
+    }
 
-        eyeHolder.lookAt(x * 2, y * 2, z * 2);
-        eyesGroup.add(eyeHolder);
+    function frameArena() {
+      const span = Math.max(arenaW, arenaH, 80);
+      camera.position.set(span * 0.08, span * 0.58, span * 0.74);
+      controls.target.set(0, 0, 0);
+      controls.update();
+    }
+
+    function worldToScene(x, y) {
+      return { x: x - arenaW / 2, z: y - arenaH / 2 };
+    }
+
+    function applyQuality() {
+      const dpr = window.devicePixelRatio || 1;
+      const shadows = gfxShadows && quality !== 'low';
+      renderer.setPixelRatio(quality === 'ultra' ? Math.min(2, dpr) : quality === 'low' ? 1 : Math.min(1.5, dpr));
+      renderer.shadowMap.enabled = shadows;
+      sun.castShadow = shadows;
+      floor.receiveShadow = shadows;
+      if (quality === 'ultra') sun.shadow.mapSize.set(2048, 2048);
+      else sun.shadow.mapSize.set(1024, 1024);
+      sun.shadow.map = null;
+      creatureMeshes.forEach((group) => {
+        const dome = group.getObjectByName('dome');
+        if (dome) dome.castShadow = shadows;
+      });
+      foodMesh.castShadow = false;
+      berryMesh.castShadow = false;
+      meatMesh.castShadow = false;
+    }
+
+    function bodyHsl(c) {
+      let h = c.hue;
+      let s = Math.min(0.85, Math.max(0.35, c.sat || 0.6));
+      let l = 0.36 + (c.nrg || 0) * 0.2;
+      if (dietLens) {
+        h = c.diet === 2 ? 0.01 : c.diet === 1 ? 0.8 : 0.28;
+        s = 0.7;
       }
-      group.add(eyesGroup);
-      group.userData = { id: cData.id };
+      const dimmed = (focusLine != null && c.line !== focusLine) || (focusCluster != null && c.cluster !== focusCluster);
+      if (dimmed && c.id !== selectedId) l *= 0.28;
+      return { h, s, l, dimmed };
+    }
+
+    function createCreature(c) {
+      const group = new THREE.Group();
+      const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4, metalness: 0.06, emissive: 0x000000 });
+      const dome = new THREE.Mesh(domeGeo, mat);
+      dome.name = 'dome';
+      dome.castShadow = sun.castShadow;
+      dome.receiveShadow = true;
+      group.add(dome);
+      const n = Math.max(0, Math.min(6, Math.round((c.spk || 0) * 7)));
+      for (let i = 0; i < n; i++) {
+        const spike = new THREE.Mesh(spikeGeo, spikeMat);
+        const a = (i / n) * Math.PI * 2;
+        const dir = new THREE.Vector3(Math.cos(a), 0.22, Math.sin(a)).normalize();
+        spike.position.copy(dir.clone().multiplyScalar(0.78));
+        spike.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+        spike.castShadow = sun.castShadow;
+        group.add(spike);
+      }
+      const eyes = new THREE.Group();
+      eyes.name = 'eyes';
+      (c.eyes || []).forEach(([azi, ele]) => {
+        const holder = new THREE.Group();
+        const r = 0.9;
+        const x = r * Math.cos(ele) * Math.sin(azi);
+        const y = Math.max(0.12, r * Math.sin(ele));
+        const z = r * Math.cos(ele) * Math.cos(azi);
+        holder.position.set(x, y, z);
+        holder.add(new THREE.Mesh(eyeWhiteGeo, whiteMat));
+        const pupil = new THREE.Mesh(pupilGeo, pupilMat);
+        pupil.position.z = 0.14;
+        holder.add(pupil);
+        const catchLight = new THREE.Mesh(catchGeo, catchMat);
+        catchLight.position.set(0.05, 0.05, 0.16);
+        holder.add(catchLight);
+        holder.lookAt(x * 2, y * 2, z * 2);
+        eyes.add(holder);
+      });
+      group.add(eyes);
+      const gaze = new THREE.Group();
+      gaze.name = 'gaze';
+      gaze.visible = false;
+      group.add(gaze);
+      group.userData.id = c.id;
       scene.add(group);
       return group;
     }
 
-    // --- UI TABS ---
-    document.querySelectorAll('.drawer-panel .tab-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        if (!btn.getAttribute('data-tab')) return;
-        document.querySelectorAll('.drawer-panel .tab-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.drawer-panel .tab-content').forEach(c => c.classList.remove('active'));
-        btn.classList.add('active');
-        document.getElementById(btn.getAttribute('data-tab')).classList.add('active');
+    function syncGaze(group, c) {
+      const gaze = group.getObjectByName('gaze');
+      if (!gaze) return;
+      const on = c.id === selectedId && !selectedDead;
+      if (!on) { gaze.visible = false; return; }
+      if (gaze.userData.built !== c.id) {
+        while (gaze.children.length) {
+          const child = gaze.children.pop();
+          child.geometry.dispose();
+        }
+        const scale = Math.max(0.25, c.r || 1);
+        (c.eyes || []).forEach(([azi, ele, range, fov]) => {
+          const dir = new THREE.Vector3(
+            Math.cos(ele) * Math.sin(azi),
+            Math.sin(ele),
+            Math.cos(ele) * Math.cos(azi)
+          ).normalize();
+          const height = Math.max(1, (range || 20) / scale);
+          const radius = Math.max(0.12, height * Math.tan(Math.max(0.2, fov || 0.7) / 2));
+          const cone = new THREE.Mesh(new THREE.ConeGeometry(radius, height, 14, 1, true), gazeMat);
+          cone.position.copy(dir.clone().multiplyScalar(0.85 + height / 2));
+          cone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+          gaze.add(cone);
+        });
+        gaze.userData.built = c.id;
+      }
+      gaze.visible = true;
+    }
+
+    function paintCreature(group, c) {
+      const dome = group.getObjectByName('dome');
+      const col = bodyHsl(c);
+      dome.material.color.setHSL(col.h, col.s, col.l);
+      const bite = (c.act & 1) !== 0;
+      const mate = (c.act & 2) !== 0;
+      const fertile = (c.act & 4) !== 0;
+      if (col.dimmed && c.id !== selectedId) dome.material.emissive.setRGB(0, 0, 0);
+      else if (bite) dome.material.emissive.setHex(0xffe1c4);
+      else if (c.hp < 0.35) dome.material.emissive.setHex(0x7a2430);
+      else if (mate || fertile) dome.material.emissive.setHex(0x6a305c);
+      else dome.material.emissive.setHSL(col.h, col.s * 0.5, 0.03 + c.nrg * 0.05);
+      group.userData.act = c.act || 0;
+      group.userData.baseScale = c.r || 1;
+      group.userData.rot = c.rot || 0;
+      group.userData.ref = c;
+    }
+
+    function dropCreature(group) {
+      const dome = group.getObjectByName('dome');
+      if (dome) dome.material.dispose();
+      const gaze = group.getObjectByName('gaze');
+      if (gaze) gaze.children.forEach((child) => child.geometry.dispose());
+      scene.remove(group);
+    }
+
+    function clearCreatures() {
+      creatureMeshes.forEach(dropCreature);
+      creatureMeshes.clear();
+      domes.length = 0;
+      ring.visible = false;
+      selLight.intensity = 0;
+    }
+
+    function burst(x, y, z, hex, count) {
+      const color = new THREE.Color(hex);
+      for (let i = 0; i < count; i++) {
+        const k = sparkCursor++ % SPARK_N;
+        sparkPos[k * 3] = x;
+        sparkPos[k * 3 + 1] = y;
+        sparkPos[k * 3 + 2] = z;
+        sparkVel[k * 3] = (Math.random() - 0.5) * 2.4;
+        sparkVel[k * 3 + 1] = 0.5 + Math.random() * 2;
+        sparkVel[k * 3 + 2] = (Math.random() - 0.5) * 2.4;
+        sparkCol[k * 3] = color.r;
+        sparkCol[k * 3 + 1] = color.g;
+        sparkCol[k * 3 + 2] = color.b;
+        sparkLife[k] = 0.65 + Math.random() * 0.45;
+      }
+    }
+
+    function creatureTitle(c) {
+      return `${NAMES[c.id % NAMES.length]} · #${c.id}`;
+    }
+
+    function fmt(n) {
+      const v = Math.round(Number(n) || 0);
+      return v.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    }
+
+    function narrate(s) {
+      const st = s.stats;
+      if (st.population < 8) return 'Луг почти затих. Остались единицы, и каждая ошибка теперь слышна.';
+      if (st.carnivores > st.herbivores && st.carnivores > 3) return 'Челюсти взяли верх. Травоядные живут в промежутках между охотами.';
+      if (st.avg_jaw > 0.42) return 'Зубы удлиняются. Мясо начинает стоить дороже травы.';
+      if (st.food_count < st.population * 0.45) return 'Поляны редеют. Голод уже выбирает, кому оставлять потомство.';
+      if (st.avg_eyes > 3.1) return 'Глаз становится больше. Мир складывается в картинку, а не в пятно.';
+      if (st.max_generation >= 12) return `Поколение ${st.max_generation} помнит луг лучше первых пионеров.`;
+      if (st.food_count > st.population * 4) return 'Травы в избытке. Сытые блёбы тратят время на ухаживания.';
+      return 'Собиратели ползут по тёплой почве и пробуют мир на запах.';
+    }
+
+    function noteMilestone(key, text) {
+      const id = `${currentSim}:${key}`;
+      if (milestones.has(id)) return;
+      milestones.add(id);
+      store.set('blob.milestones', JSON.stringify([...milestones]));
+      toast({ level: 'STORY', message: text });
+    }
+
+    function considerMilestones(s) {
+      const pending = [];
+      if (s.stats.carnivores > 0) pending.push(['carn', 'На лугу появился хищник. Трава больше не единственная валюта.']);
+      if (s.stats.predation_deaths > 0) pending.push(['hunt', 'Кто-то съел соседа. Калории тела остались на месте.']);
+      [5, 10, 20, 40, 80].forEach((g) => {
+        if (s.stats.max_generation >= g) pending.push([`gen${g}`, `Поколение ${g} пережило основателей.`]);
       });
-    });
-
-    // --- CHART.JS CONFIGURATION & SYNC ---
-    const MAX_POINTS = 90;
-    let currentSimName = 'default';
-    let lastChartTick = 0;
-    let isSyncingHistory = false;
-
-    const defaultScales = {
-      x: {
-        grid: { color: 'rgba(255,255,255,0.04)' },
-        ticks: { color: '#64748b', font: { size: 11, weight: 'bold' } }
-      },
-      y: {
-        grid: { color: 'rgba(255,255,255,0.06)' },
-        ticks: { color: '#94a3b8', font: { size: 12, weight: 'bold' } }
+      if (!bootedMilestones) {
+        pending.forEach(([key]) => milestones.add(`${currentSim}:${key}`));
+        bootedMilestones = true;
+        return;
       }
-    };
+      pending.forEach(([key, text]) => noteMilestone(key, text));
+    }
 
-    // Main multi-series chart: Population, Food, Meat
-    const ctxPop = document.getElementById('chart-pop').getContext('2d');
-    const chartPop = new Chart(ctxPop, {
-      type: 'line',
-      data: {
-        labels: [],
-        datasets: [
-          { label: 'Блёбы', data: [], borderColor: '#4ade80', backgroundColor: 'rgba(74, 222, 128, 0.1)', borderWidth: 2.5, pointRadius: 0, tension: 0.2, fill: true },
-          { label: 'Еда', data: [], borderColor: '#facc15', borderWidth: 1.8, pointRadius: 0, tension: 0.2, borderDash: [4, 4] },
-          { label: 'Мясо', data: [], borderColor: '#f472b6', borderWidth: 1.8, pointRadius: 0, tension: 0.2 }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: false,
-        scales: defaultScales,
-        plugins: {
-          legend: {
-            display: true,
-            position: 'top',
-            labels: { color: '#cbd5e1', font: { size: 11, weight: 'bold' }, boxWidth: 14 }
-          },
-          tooltip: {
-            backgroundColor: 'rgba(15, 23, 42, 0.95)',
-            titleFont: { size: 13, weight: 'bold' },
-            bodyFont: { size: 12 },
-            padding: 10,
-            cornerRadius: 8
-          }
-        }
-      }
-    });
+    function setBar(id, ratio) {
+      $(id).style.width = `${Math.max(0, Math.min(100, ratio * 100))}%`;
+    }
 
-    function makeTraitChart(canvasId, label, color) {
-      const ctx = document.getElementById(canvasId).getContext('2d');
-      return new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: [],
-          datasets: [{ label, data: [], borderColor: color, backgroundColor: `${color}18`, borderWidth: 2.2, pointRadius: 0, tension: 0.2, fill: true }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          animation: false,
-          scales: defaultScales,
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              backgroundColor: 'rgba(15, 23, 42, 0.95)',
-              titleFont: { size: 12, weight: 'bold' },
-              bodyFont: { size: 12 },
-              padding: 8,
-              cornerRadius: 6
-            }
-          }
-        }
+    function paintActs(c) {
+      const bits = [
+        ['Газ', (c.act & 8) !== 0, false],
+        ['Укус', (c.act & 1) !== 0, true],
+        ['Пара', (c.act & 2) !== 0, false],
+        ['Готов', (c.act & 4) !== 0, false]
+      ];
+      $('dos-acts').innerHTML = bits.map(([name, on, hot]) => `<span class="${on ? (hot ? 'hot' : 'on') : ''}">${name}</span>`).join('');
+    }
+
+    function drawPortrait(c) {
+      const canvas = $('portrait');
+      const g = canvas.getContext('2d');
+      const w = canvas.width;
+      const h = canvas.height;
+      g.clearRect(0, 0, w, h);
+      const col = bodyHsl(c);
+      g.fillStyle = `hsl(${col.h * 360} ${col.s * 100}% ${Math.min(62, col.l * 100 + 8)}%)`;
+      g.beginPath();
+      g.ellipse(w / 2, h * 0.78, 78, 62, 0, Math.PI, 0);
+      g.fill();
+      (c.eyes || []).forEach(([azi, ele]) => {
+        const x = w / 2 + Math.sin(azi) * 46;
+        const y = h * 0.52 - Math.sin(ele) * 28;
+        g.fillStyle = '#fffaf3';
+        g.beginPath();
+        g.arc(x, y, 6.5, 0, 6.283);
+        g.fill();
+        g.fillStyle = '#1a120c';
+        g.beginPath();
+        g.arc(x + 1.5, y, 2.6, 0, 6.283);
+        g.fill();
       });
     }
 
-    const chartEyes = makeTraitChart('chart-eyes', 'Среднее число глаз', '#fbbf24');
-    const chartJaw = makeTraitChart('chart-jaw', 'Сила челюсти', '#f87171');
-    const chartSize = makeTraitChart('chart-size', 'Средний радиус', '#60a5fa');
+    function drawBrain(c) {
+      const canvas = $('brain-canvas');
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      const w = canvas.clientWidth || 320;
+      const h = 176;
+      canvas.width = Math.floor(w * dpr);
+      canvas.height = Math.floor(h * dpr);
+      const g = canvas.getContext('2d');
+      g.setTransform(dpr, 0, 0, dpr, 0, 0);
+      g.clearRect(0, 0, w, h);
+      const sensors = [
+        ['Сытость', c.brain_inputs[12]], ['Здоровье', c.brain_inputs[13]], ['Возраст', c.brain_inputs[14]],
+        ['Еда', c.brain_inputs[15]], ['Тревога', c.brain_inputs[16]], ['Пара', c.brain_inputs[17]],
+        ['Удар', c.brain_inputs[18]], ['Ход', c.brain_inputs[19]]
+      ];
+      const outs = ['Газ', 'Руль', 'Укус', 'Пара', 'Запах'];
+      const hidden = c.brain_hidden || [];
+      g.font = '11px Outfit, sans-serif';
+      sensors.forEach((sensor, i) => {
+        const y = 16 + i * 19;
+        g.fillStyle = '#a89c8d';
+        g.fillText(sensor[0], 8, y);
+        const val = Math.max(-1, Math.min(1, sensor[1] || 0));
+        g.fillStyle = 'rgba(255,255,255,.08)';
+        g.fillRect(62, y - 8, 54, 6);
+        g.fillStyle = val < 0 ? '#ff8fa3' : '#d6f58a';
+        g.fillRect(val < 0 ? 89 + val * 27 : 89, y - 8, Math.abs(val) * 27, 6);
+      });
+      hidden.forEach((v, i) => {
+        const col = i % 4;
+        const row = Math.floor(i / 4);
+        const x = w * 0.48 + (col - 1.5) * 16;
+        const y = 36 + row * 36;
+        const t = Math.max(-1, Math.min(1, v || 0));
+        g.beginPath();
+        g.fillStyle = t >= 0 ? `rgba(214,245,138,${0.25 + t * 0.75})` : `rgba(255,143,163,${0.25 + Math.abs(t) * 0.75})`;
+        g.arc(x, y, 7, 0, 6.283);
+        g.fill();
+      });
+      (c.brain_outputs || []).forEach((raw, i) => {
+        const y = 28 + i * 28;
+        const t = Math.tanh(raw || 0);
+        g.fillStyle = '#a89c8d';
+        g.fillText(outs[i] || '', w - 118, y);
+        g.fillStyle = 'rgba(255,255,255,.08)';
+        g.fillRect(w - 70, y - 8, 58, 6);
+        g.fillStyle = '#f0c36a';
+        const width = Math.abs(t) * 29;
+        g.fillRect(t < 0 ? w - 41 - width : w - 41, y - 8, width, 6);
+      });
+    }
 
-    async function syncHistory(simName) {
-      if (isSyncingHistory) return;
-      isSyncingHistory = true;
-      document.getElementById('chart-pop-status').innerText = 'Синхронизация...';
+    function paintLive(c) {
+      if (!c || c.id !== selectedId) return;
+      $('dos-diet').textContent = DIET[c.diet] || 'особь';
+      $('dos-name').textContent = selectedDead ? 'Ушёл в почву' : creatureTitle(c);
+      $('dos-sub').textContent = `род ${c.line} · поколение ${c.gen}`;
+      setBar('bar-nrg', c.nrg || 0);
+      setBar('bar-hp', c.hp || 0);
+      setBar('bar-age', c.age || 0);
+      $('fact-line').textContent = `${c.line} / ${c.gen}`;
+      $('fact-eyes').textContent = String((c.eyes || []).length);
+      $('fact-jaw').textContent = `${(c.jaw || 0).toFixed(2)} / ${(c.spk || 0).toFixed(2)}`;
+      paintActs(c);
+      drawPortrait(c);
+    }
 
+    function showDead() {
+      selectedDead = true;
+      $('dos-diet').textContent = 'память';
+      $('dos-name').textContent = 'Ушёл в почву';
+      $('dos-sub').textContent = 'тело стало мясом, энергия осталась в луге';
+    }
+
+    async function fetchDetail(id) {
       try {
-        const res = await fetch('/api/history');
-        if (!res.ok) throw new Error('History fetch failed');
-        const history = await res.json();
-
-        if (Array.isArray(history) && history.length > 0) {
-          const labels = [];
-          const popData = [];
-          const foodData = [];
-          const meatData = [];
-          const eyesData = [];
-          const jawData = [];
-          const sizeData = [];
-
-          const recent = history.slice(-MAX_POINTS);
-          for (let i = 0; i < recent.length; i++) {
-            const h = recent[i];
-            labels.push(h.tick);
-            popData.push(h.population);
-            foodData.push(h.food_count);
-            meatData.push(h.meat_count);
-            eyesData.push(h.avg_eyes);
-            jawData.push(h.avg_jaw);
-            sizeData.push(h.avg_radius);
-          }
-
-          chartPop.data.labels = labels;
-          chartPop.data.datasets[0].data = popData;
-          chartPop.data.datasets[1].data = foodData;
-          chartPop.data.datasets[2].data = meatData;
-
-          chartEyes.data.labels = labels;
-          chartEyes.data.datasets[0].data = eyesData;
-
-          chartJaw.data.labels = labels;
-          chartJaw.data.datasets[0].data = jawData;
-
-          chartSize.data.labels = labels;
-          chartSize.data.datasets[0].data = sizeData;
-
-          lastChartTick = recent[recent.length - 1].tick;
-
-          chartPop.update('none');
-          chartEyes.update('none');
-          chartJaw.update('none');
-          chartSize.update('none');
-        } else {
-          resetAllCharts();
-          lastChartTick = 0;
-        }
-        document.getElementById('chart-pop-status').innerText = 'В реальном времени';
-      } catch (err) {
-        document.getElementById('chart-pop-status').innerText = 'Ожидание данных...';
-      } finally {
-        isSyncingHistory = false;
-      }
+        const res = await fetch(`/api/creature/${id}`);
+        const c = await res.json();
+        if (selectedId !== id) return;
+        if (!c) { showDead(); return; }
+        selectedDead = false;
+        $('txt-nrg').textContent = `${fmt(c.energy)} / ${fmt(c.max_energy)}`;
+        $('txt-hp').textContent = `${fmt(c.health)} / ${fmt(c.max_health)}`;
+        $('txt-age').textContent = `${fmt(c.age)} / ${fmt(c.lifespan)}`;
+        $('fact-speed').textContent = `${c.speed.toFixed(1)} / ${c.radius.toFixed(2)}`;
+        $('fact-kills').textContent = `${c.kills} / ${c.offspring}`;
+        $('fact-food').textContent = `${c.food_eaten} / ${c.meat_eaten}`;
+        $('fact-choosy').textContent = c.choosiness.toFixed(2);
+        $('fact-meta').textContent = c.metabolic_eff.toFixed(2);
+        drawBrain(c);
+      } catch { /* next snapshot will retry */ }
     }
 
-    function resetAllCharts() {
-      [chartPop, chartEyes, chartJaw, chartSize].forEach(ch => {
+    function selectCreature(id) {
+      selectedId = id;
+      selectedDead = false;
+      follow = false;
+      reflectFollow();
+      $('dossier').hidden = false;
+      const c = live.find((item) => item.id === id);
+      if (c) paintLive(c);
+      fetchDetail(id);
+    }
+
+    function deselect() {
+      selectedId = null;
+      selectedDead = false;
+      follow = false;
+      reflectFollow();
+      $('dossier').hidden = true;
+      $('nameplate').hidden = true;
+      ring.visible = false;
+      selLight.intensity = 0;
+    }
+
+    function reflectFollow() {
+      $('btn-follow').textContent = follow ? 'Отпустить' : 'Следить';
+      $('btn-follow').classList.toggle('on', follow);
+    }
+
+    function setFollow(on) {
+      follow = on && selectedId != null;
+      reflectFollow();
+    }
+
+    function seek(kind) {
+      let best = null;
+      live.forEach((c) => {
+        if (!best) { best = c; return; }
+        const better = kind === 'jaw' ? c.jaw > best.jaw : kind === 'age' ? c.age > best.age : c.gen > best.gen;
+        if (better) best = c;
+      });
+      if (!best) return;
+      selectCreature(best.id);
+      setFollow(true);
+    }
+
+    function updateFocusChip() {
+      const chip = $('focus-chip');
+      if (focusLine == null && focusCluster == null) { chip.hidden = true; return; }
+      const count = live.filter((c) => (focusLine != null ? c.line === focusLine : c.cluster === focusCluster)).length;
+      chip.hidden = false;
+      chip.textContent = focusLine != null ? `род ${focusLine} · ${count}` : `вид · ${count}`;
+    }
+
+    function renderSpecies(list) {
+      const root = $('species-container');
+      if (!list || !list.length) {
+        root.innerHTML = '<p class="quiet">Пока некого раскладывать по видам.</p>';
+        return;
+      }
+      const max = Math.max(...list.map((sp) => sp.count), 1);
+      root.innerHTML = list.map((sp) => {
+        const pill = sp.diet === 'Хищник' ? 'carn' : sp.diet === 'Всеядный' ? 'omni' : 'herb';
+        const lit = focusCluster != null && sp.cluster === focusCluster ? ' lit' : '';
+        return `<button type="button" class="specimen${lit}" data-cluster="${sp.cluster}">
+          <i class="thread" style="--c:${sp.color_hex}"></i>
+          <span class="body">
+            <span class="top"><strong>${esc(sp.name)}</strong><span class="pill ${pill}">${esc(sp.diet)} · ${sp.count}</span></span>
+            <span class="spec-meta">
+              <span>глаза <b>${sp.avg_eyes.toFixed(1)}</b></span><span>челюсть <b>${sp.avg_jaw.toFixed(2)}</b></span>
+              <span>ход <b>${sp.avg_speed.toFixed(1)}</b></span><span>броня <b>${sp.avg_armor.toFixed(2)}</b></span>
+            </span>
+            <span class="popbar"><i style="width:${(sp.count / max) * 100}%; --c:${sp.color_hex}"></i></span>
+          </span>
+        </button>`;
+      }).join('');
+      root.querySelectorAll('.specimen').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const cluster = Number(btn.dataset.cluster);
+          focusLine = null;
+          focusCluster = focusCluster === cluster ? null : cluster;
+          renderSpecies(list);
+          updateFocusChip();
+        });
+      });
+    }
+
+    function esc(s) {
+      return String(s).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+    }
+
+    function renderJournal() {
+      const root = $('journal');
+      if (!journal.length) {
+        root.innerHTML = '<p class="quiet">Луг пока молчит.</p>';
+        return;
+      }
+      root.innerHTML = journal.slice().reverse().map((ev) => {
+        const lv = (ev.level || 'info').toLowerCase();
+        return `<div class="journal-item ${lv}"><div class="lv">${esc(ev.level || '')} · тик ${fmt(ev.tick)}</div><p>${esc(ev.message)}</p></div>`;
+      }).join('');
+    }
+
+    function toast(ev) {
+      const node = document.createElement('div');
+      node.className = 'toast';
+      node.innerHTML = `<b>${esc(ev.level || 'ЛУГ')}</b><p>${esc(ev.message)}</p>`;
+      $('toasts').appendChild(node);
+      setTimeout(() => node.classList.add('out'), 4200);
+      setTimeout(() => node.remove(), 4700);
+    }
+
+    function rememberEvent(ev) {
+      const key = `${ev.tick}|${ev.message}`;
+      if (seenEventKeys.has(key)) return false;
+      seenEventKeys.add(key);
+      if (seenEventKeys.size > 240) seenEventKeys.delete(seenEventKeys.values().next().value);
+      return true;
+    }
+
+    function takeEvents(events, announce) {
+      if (swallowEvents) {
+        journal.length = 0;
+        events.slice(-30).forEach((ev) => {
+          rememberEvent(ev);
+          journal.push(ev);
+        });
+        swallowEvents = false;
+        renderJournal();
+        return;
+      }
+      const fresh = [];
+      events.forEach((ev) => { if (rememberEvent(ev)) fresh.push(ev); });
+      fresh.forEach((ev) => {
+        journal.push(ev);
+        if (/METEOR/i.test(ev.message)) { shake = 1.4; shockT = 1; }
+        if (/RADIATION/i.test(ev.message)) radPulse = 1;
+      });
+      if (journal.length > 80) journal.splice(0, journal.length - 80);
+      if (!fresh.length) return;
+      if (announce) toast(fresh[fresh.length - 1]);
+      if (atlasTab === 'journal') renderJournal();
+    }
+
+    function drawSpark() {
+      const canvas = $('spark');
+      const g = canvas.getContext('2d');
+      g.clearRect(0, 0, canvas.width, canvas.height);
+      if (sparkHist.length < 2) return;
+      const max = Math.max(...sparkHist, 1);
+      g.beginPath();
+      sparkHist.forEach((v, i) => {
+        const x = (i / (sparkHist.length - 1)) * (canvas.width - 4) + 2;
+        const y = canvas.height - 4 - (v / max) * (canvas.height - 8);
+        if (i) g.lineTo(x, y); else g.moveTo(x, y);
+      });
+      g.strokeStyle = '#d6f58a';
+      g.lineWidth = 1.6;
+      g.stroke();
+    }
+
+    function drawMap(s) {
+      const canvas = $('map-canvas');
+      const g = canvas.getContext('2d');
+      const w = canvas.width;
+      const h = canvas.height;
+      g.fillStyle = '#14110e';
+      g.fillRect(0, 0, w, h);
+      const ww = s.world_w || 1;
+      const hh = s.world_h || 1;
+      if (showScent && s.scent && s.scent_w && s.scent_h) {
+        for (let i = 0; i < s.scent_w * s.scent_h; i++) {
+          const plant = s.scent[i * 3] || 0;
+          const danger = s.scent[i * 3 + 1] || 0;
+          const mate = s.scent[i * 3 + 2] || 0;
+          if (plant + danger + mate < 8) continue;
+          const x = (i % s.scent_w) / s.scent_w * w;
+          const y = Math.floor(i / s.scent_w) / s.scent_h * h;
+          g.fillStyle = `rgba(${Math.min(255, danger + mate)},${Math.min(255, plant)},${Math.min(255, mate)},0.35)`;
+          g.fillRect(x, y, w / s.scent_w + 1, h / s.scent_h + 1);
+        }
+      }
+      g.fillStyle = 'rgba(240,195,106,.85)';
+      (s.food || []).forEach((f) => g.fillRect(f[0] / ww * w, f[1] / hh * h, 1.6, 1.6));
+      (s.creatures || []).forEach((c) => {
+        const col = dietLens ? (c.diet === 2 ? '#ff8fa3' : c.diet === 1 ? '#e2b6ff' : '#d6f58a') : `hsl(${(c.hue || 0) * 360} 70% 62%)`;
+        g.fillStyle = col;
+        g.beginPath();
+        g.arc(c.x / ww * w, c.y / hh * h, c.id === selectedId ? 3.4 : 1.7, 0, 6.283);
+        g.fill();
+      });
+    }
+
+    const chartScale = {
+      x: { grid: { color: 'rgba(255,255,255,.04)' }, ticks: { color: '#a89c8d', maxTicksLimit: 5, font: { size: 10 } } },
+      y: { grid: { color: 'rgba(255,255,255,.05)' }, ticks: { color: '#a89c8d', font: { size: 10 } }, beginAtZero: true }
+    };
+    const chartPlugins = {
+      legend: { labels: { color: '#ddd4c6', boxWidth: 10, font: { size: 11 } } },
+      tooltip: { backgroundColor: 'rgba(16,13,11,.95)', padding: 8 }
+    };
+    function makeChart(id, datasets, legend) {
+      if (typeof Chart === 'undefined') return null;
+      try {
+        return new Chart($(id), {
+          type: 'line',
+          data: { labels: [], datasets },
+          options: {
+            responsive: true, maintainAspectRatio: false, animation: false,
+            scales: chartScale,
+            plugins: { ...chartPlugins, legend: { ...chartPlugins.legend, display: legend } }
+          }
+        });
+      } catch { return null; }
+    }
+    const line = (label, color, fill) => ({
+      label, data: [], borderColor: color, backgroundColor: fill || 'transparent',
+      borderWidth: 2, pointRadius: 0, tension: 0.25, fill: !!fill
+    });
+    const chartPop = makeChart('chart-pop', [
+      line('Блёбы', '#d6f58a', 'rgba(214,245,138,.12)'),
+      line('Трава', '#f0c36a'),
+      line('Мясо', '#ff8fa3')
+    ], true);
+    const chartDiet = makeChart('chart-diet', [line('Травоядные', '#d6f58a'), line('Хищники', '#ff8fa3')], true);
+    const chartEyes = makeChart('chart-eyes', [line('Глаза', '#f0c36a', 'rgba(240,195,106,.1)')], false);
+    const chartJaw = makeChart('chart-jaw', [line('Челюсть', '#ff8fa3', 'rgba(255,143,163,.1)')], false);
+    const chartSize = makeChart('chart-size', [line('Радиус', '#b7d4ea', 'rgba(183,212,234,.12)')], false);
+    const charts = [chartPop, chartDiet, chartEyes, chartJaw, chartSize].filter(Boolean);
+
+    function resetCharts() {
+      charts.forEach((ch) => {
         ch.data.labels = [];
-        ch.data.datasets.forEach(ds => ds.data = []);
+        ch.data.datasets.forEach((ds) => { ds.data = []; });
         ch.update('none');
       });
+      sparkHist.length = 0;
+      drawSpark();
       lastChartTick = 0;
     }
 
-    function appendChartPoint(tick, pop, food, meat, eyes, jaw, size) {
-      const labels = chartPop.data.labels;
-      labels.push(tick);
+    function pushChart(tick, pop, food, meat, herbs, carns, eyes, jaw, size) {
+      if (!chartPop) return;
+      chartPop.data.labels.push(tick);
       chartPop.data.datasets[0].data.push(pop);
       chartPop.data.datasets[1].data.push(food);
       chartPop.data.datasets[2].data.push(meat);
-
-      chartEyes.data.labels.push(tick);
-      chartEyes.data.datasets[0].data.push(eyes);
-
-      chartJaw.data.labels.push(tick);
-      chartJaw.data.datasets[0].data.push(jaw);
-
-      chartSize.data.labels.push(tick);
-      chartSize.data.datasets[0].data.push(size);
-
-      if (labels.length > MAX_POINTS) {
-        chartPop.data.labels.shift();
-        chartPop.data.datasets.forEach(ds => ds.data.shift());
-
-        chartEyes.data.labels.shift();
-        chartEyes.data.datasets[0].data.shift();
-
-        chartJaw.data.labels.shift();
-        chartJaw.data.datasets[0].data.shift();
-
-        chartSize.data.labels.shift();
-        chartSize.data.datasets[0].data.shift();
-      }
-
-      chartPop.update('none');
-      chartEyes.update('none');
-      chartJaw.update('none');
-      chartSize.update('none');
+      chartDiet.data.labels.push(tick);
+      chartDiet.data.datasets[0].data.push(herbs);
+      chartDiet.data.datasets[1].data.push(carns);
+      [[chartEyes, eyes], [chartJaw, jaw], [chartSize, size]].forEach(([ch, value]) => {
+        ch.data.labels.push(tick);
+        ch.data.datasets[0].data.push(value);
+      });
+      charts.forEach((ch) => {
+        while (ch.data.labels.length > 90) {
+          ch.data.labels.shift();
+          ch.data.datasets.forEach((ds) => ds.data.shift());
+        }
+        ch.update('none');
+      });
+      sparkHist.push(pop);
+      if (sparkHist.length > 64) sparkHist.shift();
+      drawSpark();
     }
 
-    // --- WEBSOCKET CLIENT & AUTO-RECONNECT ---
-    let ws = null;
-    const shield = document.getElementById('connection-shield');
+    async function syncHistory() {
+      if (syncingHistory) return;
+      syncingHistory = true;
+      const status = $('chart-status');
+      if (status) status.textContent = 'архив';
+      try {
+        const res = await fetch('/api/history');
+        const history = await res.json();
+        resetCharts();
+        if (Array.isArray(history)) {
+          history.slice(-90).forEach((h) => {
+            pushChart(h.tick, h.population, h.food_count, h.meat_count, h.herbivores || 0, h.carnivores || 0, h.avg_eyes, h.avg_jaw, h.avg_radius);
+          });
+          if (history.length) lastChartTick = history[history.length - 1].tick;
+        }
+        if (status) status.textContent = 'живьём';
+      } catch {
+        if (status) status.textContent = 'ждём';
+      } finally {
+        syncingHistory = false;
+      }
+    }
 
+    function paintScent(s) {
+      const w = s.scent_w || 0;
+      const h = s.scent_h || 0;
+      if (!showScent || !w || !h || !s.scent || s.scent.length < w * h * 3) {
+        scentMesh.visible = false;
+        return;
+      }
+      scentMesh.visible = true;
+      if (scentCanvas.width !== w || scentCanvas.height !== h) {
+        scentCanvas.width = w;
+        scentCanvas.height = h;
+      }
+      const img = scentCtx.createImageData(w, h);
+      for (let i = 0; i < w * h; i++) {
+        const plant = s.scent[i * 3];
+        const danger = s.scent[i * 3 + 1];
+        const mate = s.scent[i * 3 + 2];
+        const o = i * 4;
+        img.data[o] = Math.min(255, danger * 1.5 + mate * 0.9);
+        img.data[o + 1] = Math.min(255, plant * 1.6);
+        img.data[o + 2] = Math.min(255, mate * 1.55 + danger * 0.2);
+        img.data[o + 3] = Math.min(210, plant * 2.1 + danger * 2.3 + mate * 2.1);
+      }
+      scentCtx.putImageData(img, 0, 0);
+      scentTex.needsUpdate = true;
+    }
+
+    function reflectSpeed(s) {
+      worldPaused = !!s.paused;
+      $('btn-pause').classList.toggle('on', worldPaused);
+      $('btn-pause').textContent = worldPaused ? 'Идёт' : 'Пауза';
+      document.querySelectorAll('#speed-seg button').forEach((btn) => {
+        const on = !worldPaused && Math.abs(parseFloat(btn.dataset.speed) - s.speed) < 0.05;
+        btn.classList.toggle('on', on);
+      });
+      if (!worldPaused && s.speed > 0) rememberedSpeed = s.speed;
+    }
+
+    function renderSnapshot(s) {
+      if (s.active_sim && s.active_sim !== currentSim) {
+        currentSim = s.active_sim;
+        clearCreatures();
+        seenIds = null;
+        resetCharts();
+        journal.length = 0;
+        seenEventKeys.clear();
+        swallowEvents = true;
+        bootedMilestones = false;
+        syncHistory();
+      }
+      $('world-name').textContent = s.active_sim || currentSim;
+      if (s.tick < lastTick) {
+        clearCreatures();
+        seenIds = null;
+        resetCharts();
+        bootedMilestones = false;
+        speciesStamp = -1;
+      }
+      lastTick = s.tick;
+      layoutArena(s.world_w, s.world_h);
+      reflectSpeed(s);
+
+      const st = s.stats;
+      $('vital-pop').textContent = fmt(st.population);
+      $('vital-gen').textContent = fmt(st.max_generation);
+      $('vital-rate').textContent = fmt(s.tps);
+      $('vital-tick').textContent = `${worldPaused ? 'пауза' : 'тик'} ${fmt(s.tick)} · ×${Math.round(s.speed || 0)}`;
+      const pop = Math.max(1, st.population);
+      $('mix-herb').style.width = `${(st.herbivores / pop) * 100}%`;
+      $('mix-omni').style.width = `${(st.omnivores / pop) * 100}%`;
+      $('mix-carn').style.width = `${(st.carnivores / pop) * 100}%`;
+      $('mix-label').textContent = `${fmt(st.herbivores)} травоядных · ${fmt(st.omnivores)} всеядных · ${fmt(st.carnivores)} хищников`;
+      $('narration').textContent = narrate(s);
+      $('mut-chip').hidden = !(s.mut_rate > 1.4);
+      $('mut-chip').textContent = `мутации ×${Number(s.mut_rate).toFixed(1)}`;
+      $('stat-births').textContent = fmt(st.total_births);
+      $('stat-deaths').textContent = fmt(st.total_deaths);
+      $('stat-causes').textContent = `${fmt(st.starvation_deaths)} / ${fmt(st.age_deaths)} / ${fmt(st.predation_deaths)}`;
+      $('stat-food').textContent = `${fmt(st.food_count)} / ${fmt(st.meat_count)}`;
+      $('stat-energy').textContent = `${fmt(st.total_energy_pool)} ккал`;
+      $('stat-traits').textContent = `${st.avg_eyes.toFixed(2)} / ${st.avg_jaw.toFixed(2)}`;
+      $('stat-body').textContent = `${st.avg_radius.toFixed(2)} / ${st.avg_speed.toFixed(1)}`;
+      $('stat-species').textContent = fmt((s.species || []).length);
+
+      if (!syncingHistory && s.tick > lastChartTick && (lastChartTick === 0 || s.tick >= lastChartTick + 25)) {
+        pushChart(s.tick, st.population, st.food_count, st.meat_count, st.herbivores, st.carnivores, st.avg_eyes, st.avg_jaw, st.avg_radius);
+        lastChartTick = s.tick;
+      }
+      if (speciesStamp < 0 || (s.tick !== speciesStamp && s.tick % 30 === 0)) {
+        speciesStamp = s.tick;
+        lastSpecies = s.species || [];
+        if (atlasTab === 'species') renderSpecies(lastSpecies);
+      }
+      considerMilestones(s);
+
+      if ((s.recent_events || []).length) takeEvents(s.recent_events, true);
+
+      const first = seenIds === null;
+      if (first) seenIds = new Set();
+      const active = new Set();
+      domes.length = 0;
+      live = s.creatures || [];
+      live.forEach((c) => {
+        active.add(c.id);
+        let group = creatureMeshes.get(c.id);
+        if (!group) {
+          group = createCreature(c);
+          creatureMeshes.set(c.id, group);
+          if (!first) {
+            const p = worldToScene(c.x, c.y);
+            const hue = new THREE.Color().setHSL(c.hue || 0.3, 0.6, 0.6);
+            burst(p.x, 0.8, p.z, hue.getHex(), 8);
+          }
+        }
+        seenIds.add(c.id);
+        const p = worldToScene(c.x, c.y);
+        group.position.set(p.x, 0, p.z);
+        group.rotation.y = -c.rot + Math.PI / 2;
+        paintCreature(group, c);
+        syncGaze(group, c);
+        domes.push(group.getObjectByName('dome'));
+      });
+      creatureMeshes.forEach((group, id) => {
+        if (!active.has(id)) {
+          burst(group.position.x, 0.7, group.position.z, 0xd9cbb8, 10);
+          dropCreature(group);
+          creatureMeshes.delete(id);
+          seenIds.delete(id);
+        }
+      });
+      if (selectedId != null && !active.has(selectedId)) {
+        setFollow(false);
+        if (!selectedDead) showDead();
+      } else if (selectedId != null) {
+        const selected = live.find((c) => c.id === selectedId);
+        if (selected) paintLive(selected);
+        if (s.tick % 8 === 0) fetchDetail(selectedId);
+      }
+      updateFocusChip();
+
+      foodScratch = (s.food || []).slice(0, 1600).map((f) => worldToScene(f[0], f[1]));
+      const meats = (s.meat || []).slice(0, 800);
+      meatMesh.count = meats.length;
+      meats.forEach((m, i) => {
+        const p = worldToScene(m[0], m[1]);
+        const scale = (m[2] || 1) * (0.45 + (m[3] || 0) * 0.7);
+        dummy.position.set(p.x, 0, p.z);
+        dummy.rotation.set(0, 0, 0);
+        dummy.scale.set(scale, scale * 0.72, scale);
+        dummy.updateMatrix();
+        meatMesh.setMatrixAt(i, dummy.matrix);
+      });
+      meatMesh.instanceMatrix.needsUpdate = true;
+      paintScent(s);
+      drawMap(s);
+    }
+
+    function poseFood(time) {
+      const n = foodScratch.length;
+      foodMesh.count = n;
+      berryMesh.count = n;
+      for (let i = 0; i < n; i++) {
+        const p = foodScratch[i];
+        const bob = Math.sin(time * 1.5 + i * 0.7) * 0.06;
+        const s = 0.75 + (i % 5) * 0.05;
+        const height = 1.05 * s;
+        dummy.rotation.set(0, i, 0);
+        dummy.scale.set(s, s, s);
+        dummy.position.set(p.x, 0.04 + height / 2 + bob, p.z);
+        dummy.updateMatrix();
+        foodMesh.setMatrixAt(i, dummy.matrix);
+        dummy.position.y = 0.04 + height + bob;
+        dummy.updateMatrix();
+        berryMesh.setMatrixAt(i, dummy.matrix);
+      }
+      foodMesh.instanceMatrix.needsUpdate = true;
+      berryMesh.instanceMatrix.needsUpdate = true;
+    }
+
+    function stepSparks(dt) {
+      let dirty = false;
+      for (let k = 0; k < SPARK_N; k++) {
+        if (sparkLife[k] <= 0) continue;
+        dirty = true;
+        sparkLife[k] -= dt;
+        if (sparkLife[k] <= 0) { sparkPos[k * 3 + 1] = -80; continue; }
+        sparkPos[k * 3] += sparkVel[k * 3] * dt;
+        sparkPos[k * 3 + 1] += sparkVel[k * 3 + 1] * dt;
+        sparkPos[k * 3 + 2] += sparkVel[k * 3 + 2] * dt;
+        sparkVel[k * 3 + 1] -= dt * 1.5;
+      }
+      if (dirty) {
+        sparkGeo.attributes.position.needsUpdate = true;
+        sparkGeo.attributes.color.needsUpdate = true;
+      }
+    }
+
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+    let press = null;
+    let lastPick = { id: null, t: 0 };
+    let lastSpecies = [];
+    let speciesStamp = -1;
+    function pick(event) {
+      const rect = renderer.domElement.getBoundingClientRect();
+      pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+      const hits = raycaster.intersectObjects(domes, false);
+      if (!hits.length) return null;
+      const group = hits[0].object.parent;
+      return group && group.userData ? group.userData.id : null;
+    }
+    renderer.domElement.addEventListener('pointerdown', (event) => {
+      if (event.button !== 0) return;
+      press = { x: event.clientX, y: event.clientY, t: performance.now() };
+    });
+    renderer.domElement.addEventListener('pointerup', (event) => {
+      if (!press || event.button !== 0) return;
+      const dx = event.clientX - press.x;
+      const dy = event.clientY - press.y;
+      press = null;
+      if (dx * dx + dy * dy > 16) return;
+      const id = pick(event);
+      if (id == null) { deselect(); return; }
+      const now = performance.now();
+      const dbl = id === lastPick.id && now - lastPick.t < 320;
+      lastPick = { id, t: now };
+      if (id !== selectedId) selectCreature(id);
+      if (dbl) setFollow(true);
+    });
+    let hoverStamp = 0;
+    renderer.domElement.addEventListener('pointermove', (event) => {
+      if (performance.now() - hoverStamp < 70) return;
+      hoverStamp = performance.now();
+      hoverId = pick(event);
+      renderer.domElement.style.cursor = hoverId ? 'pointer' : '';
+    });
+
+    $('map-canvas').addEventListener('click', (event) => {
+      const rect = event.currentTarget.getBoundingClientRect();
+      const u = (event.clientX - rect.left) / rect.width;
+      const v = (event.clientY - rect.top) / rect.height;
+      controls.target.set((u - 0.5) * arenaW, 0, (v - 0.5) * arenaH);
+    });
+
+    function placeNameplate() {
+      const plate = $('nameplate');
+      const id = hoverId || selectedId;
+      const group = id != null ? creatureMeshes.get(id) : null;
+      const c = group && group.userData.ref;
+      if (!group || !c || document.body.classList.contains('is-clean')) { plate.hidden = true; return; }
+      const pos = group.position.clone();
+      pos.y += (group.userData.baseScale || 1) * 1.35 + 0.4;
+      pos.project(camera);
+      if (pos.z > 1) { plate.hidden = true; return; }
+      plate.hidden = false;
+      plate.style.left = `${(pos.x * 0.5 + 0.5) * window.innerWidth}px`;
+      plate.style.top = `${(-pos.y * 0.5 + 0.5) * window.innerHeight}px`;
+      plate.innerHTML = `${esc(creatureTitle(c))}<small>${esc(DIET[c.diet] || '')}</small>`;
+    }
+
+    async function post(url, body) {
+      const opt = { method: 'POST' };
+      if (body !== undefined) {
+        opt.headers = { 'Content-Type': 'application/json' };
+        opt.body = JSON.stringify(body);
+      }
+      const res = await fetch(url, opt);
+      if (!res.ok) throw new Error(await res.text());
+      const text = await res.text();
+      try { return JSON.parse(text); } catch { return text; }
+    }
+
+    function sendSpeed(speed, paused) {
+      if (!paused) rememberedSpeed = speed;
+      post('/api/speed', { speed: paused ? rememberedSpeed : speed, paused });
+    }
+
+    $('btn-pause').addEventListener('click', () => sendSpeed(rememberedSpeed || 1, !worldPaused));
+    document.querySelectorAll('#speed-seg button').forEach((btn) => {
+      btn.addEventListener('click', () => sendSpeed(parseFloat(btn.dataset.speed), false));
+    });
+    $('btn-food').addEventListener('click', () => post('/api/action/food'));
+    $('btn-meat').addEventListener('click', () => post('/api/action/meat'));
+    $('btn-radiation').addEventListener('click', () => post('/api/action/radiation'));
+    $('btn-meteor').addEventListener('click', () => {
+      const btn = $('btn-meteor');
+      if (performance.now() - meteorArm < 1400) {
+        meteorArm = 0;
+        btn.classList.remove('armed');
+        btn.textContent = 'Метеорит';
+        post('/api/action/meteor');
+        return;
+      }
+      meteorArm = performance.now();
+      btn.classList.add('armed');
+      btn.textContent = 'Ещё раз';
+      setTimeout(() => {
+        if (performance.now() - meteorArm >= 1400) {
+          btn.classList.remove('armed');
+          btn.textContent = 'Метеорит';
+        }
+      }, 1450);
+    });
+
+    function openModal(id) { $(id).hidden = false; }
+    function closeModal(id) { $(id).hidden = true; }
+    document.querySelectorAll('.modal').forEach((modal) => {
+      modal.addEventListener('click', (event) => { if (event.target === modal) modal.hidden = true; });
+    });
+
+    $('btn-reset').addEventListener('click', () => {
+      $('reset-sim-target').textContent = currentSim;
+      openModal('modal-confirm-reset');
+    });
+    $('btn-cancel-reset').addEventListener('click', () => closeModal('modal-confirm-reset'));
+    $('btn-cancel-reset-x').addEventListener('click', () => closeModal('modal-confirm-reset'));
+    $('btn-do-reset').addEventListener('click', async () => {
+      closeModal('modal-confirm-reset');
+      await post('/api/action/reset');
+      clearCreatures();
+      seenIds = null;
+      resetCharts();
+      journal.length = 0;
+      seenEventKeys.clear();
+      swallowEvents = true;
+      bootedMilestones = false;
+      syncHistory();
+    });
+
+    $('dos-close').addEventListener('click', deselect);
+    $('btn-follow').addEventListener('click', () => setFollow(!follow));
+    $('btn-lineage').addEventListener('click', () => {
+      const c = live.find((item) => item.id === selectedId);
+      if (!c) return;
+      focusCluster = null;
+      focusLine = focusLine === c.line ? null : c.line;
+      updateFocusChip();
+    });
+    $('btn-seek-jaw').addEventListener('click', () => seek('jaw'));
+    $('btn-seek-age').addEventListener('click', () => seek('age'));
+    $('btn-seek-gen').addEventListener('click', () => seek('gen'));
+    $('focus-chip').addEventListener('click', () => { focusLine = null; focusCluster = null; updateFocusChip(); });
+
+    function setAtlas(open) {
+      $('atlas').classList.toggle('is-collapsed', !open);
+      $('atlas-toggle').textContent = open ? 'Свернуть' : 'Журнал';
+      store.set('blob.atlas', open ? 'open' : 'closed');
+    }
+    $('atlas-toggle').addEventListener('click', () => setAtlas($('atlas').classList.contains('is-collapsed')));
+    if (store.get('blob.atlas', 'open') === 'closed') setAtlas(false);
+
+    document.querySelectorAll('.atlas .tabs button').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        atlasTab = btn.dataset.tab;
+        document.querySelectorAll('.atlas .tabs button').forEach((b) => b.classList.toggle('on', b === btn));
+        ['field', 'species', 'charts', 'journal'].forEach((name) => {
+          $(`tab-${name}`).hidden = name !== atlasTab;
+        });
+        if (atlasTab === 'journal') renderJournal();
+        if (atlasTab === 'species') renderSpecies(lastSpecies);
+        if (atlasTab === 'charts') charts.forEach((ch) => ch.resize());
+      });
+    });
+
+    function setScent(on) {
+      showScent = on;
+      $('btn-scent').classList.toggle('on', on);
+      store.set('blob.scent', on ? '1' : '0');
+      if (!on) scentMesh.visible = false;
+    }
+    function setDiet(on) {
+      dietLens = on;
+      $('btn-diet').classList.toggle('on', on);
+      store.set('blob.diet', on ? '1' : '0');
+    }
+    setScent(showScent);
+    setDiet(dietLens);
+    $('btn-scent').addEventListener('click', () => setScent(!showScent));
+    $('btn-diet').addEventListener('click', () => setDiet(!dietLens));
+    $('btn-top').addEventListener('click', () => {
+      setFollow(false);
+      const span = Math.max(arenaW, arenaH, 80);
+      controls.target.set(0, 0, 0);
+      camera.position.set(0, span * 0.95, 0.2);
+    });
+    $('btn-home').addEventListener('click', () => { setFollow(false); frameArena(); });
+    $('btn-help').addEventListener('click', () => openModal('modal-help'));
+    $('btn-close-help').addEventListener('click', () => closeModal('modal-help'));
+    $('btn-graphics').addEventListener('click', () => {
+      $('gfx-preset').value = quality;
+      $('gfx-shadows').value = gfxShadows ? 'on' : 'off';
+      openModal('modal-graphics');
+    });
+    $('btn-close-graphics').addEventListener('click', () => closeModal('modal-graphics'));
+    $('btn-apply-graphics').addEventListener('click', () => {
+      quality = $('gfx-preset').value;
+      gfxShadows = $('gfx-shadows').value === 'on';
+      store.set('blob.quality', quality);
+      store.set('blob.shadows', gfxShadows ? '1' : '0');
+      applyQuality();
+      closeModal('modal-graphics');
+    });
+    applyQuality();
+
+    function setClean(on) {
+      document.body.classList.toggle('is-clean', on);
+      $('reveal').hidden = !on;
+    }
+    $('btn-hide').addEventListener('click', () => setClean(true));
+    $('reveal').addEventListener('click', () => setClean(false));
+
+    const modalLauncher = $('modal-launcher');
+    $('btn-worlds').addEventListener('click', openLauncher);
+    $('btn-launcher-exit').addEventListener('click', () => closeModal('modal-launcher'));
+    function openLauncher() {
+      loadSims();
+      openModal('modal-launcher');
+    }
+    $('tab-launch-existing').addEventListener('click', () => {
+      $('tab-launch-existing').classList.add('on');
+      $('tab-launch-new').classList.remove('on');
+      $('launch-existing-list').hidden = false;
+      $('launch-new-form').hidden = true;
+      loadSims();
+    });
+    $('tab-launch-new').addEventListener('click', async () => {
+      $('tab-launch-new').classList.add('on');
+      $('tab-launch-existing').classList.remove('on');
+      $('launch-new-form').hidden = false;
+      $('launch-existing-list').hidden = true;
+      try {
+        const list = await (await fetch('/api/simulations')).json();
+        const names = new Set(list.map((s) => s.name));
+        let n = list.length + 1;
+        while (names.has(`lug_${n}`)) n += 1;
+        $('launcher-sim-name').value = `lug_${n}`;
+      } catch { $('launcher-sim-name').value = 'lug'; }
+    });
+
+    async function loadSims() {
+      const root = $('launcher-sim-cards');
+      try {
+        const list = await (await fetch('/api/simulations')).json();
+        if (!list.length) { root.innerHTML = '<p class="quiet">Пока нет сохранённых миров.</p>'; return; }
+        root.innerHTML = list.map((item) => {
+          const on = item.name === currentSim;
+          return `<div class="sim-card${on ? ' on' : ''}">
+            <div><b>${esc(item.name)}${on ? ' · сейчас' : ''}</b><span>тик ${fmt(item.last_tick)} · рождения ${fmt(item.total_births)} · пик ${fmt(item.peak_population)}</span></div>
+            <div class="row-actions">${on
+              ? '<button type="button" class="text-btn js-close">К лугу</button>'
+              : `<button type="button" class="tool on js-switch" data-sim="${esc(item.name)}">Войти</button><button type="button" class="text-btn js-delete" data-sim="${esc(item.name)}">Удалить</button>`}
+            </div>
+          </div>`;
+        }).join('');
+        root.querySelectorAll('.js-close').forEach((btn) => btn.addEventListener('click', () => closeModal('modal-launcher')));
+        root.querySelectorAll('.js-switch').forEach((btn) => btn.addEventListener('click', () => switchSim(btn.dataset.sim)));
+        root.querySelectorAll('.js-delete').forEach((btn) => btn.addEventListener('click', async () => {
+          if (btn.dataset.arm !== '1') {
+            btn.dataset.arm = '1';
+            btn.textContent = 'Точно?';
+            setTimeout(() => { btn.dataset.arm = '0'; btn.textContent = 'Удалить'; }, 1600);
+            return;
+          }
+          await post(`/api/simulations/delete/${encodeURIComponent(btn.dataset.sim)}`);
+          loadSims();
+        }));
+      } catch {
+        root.innerHTML = '<p class="quiet">Список миров не открылся.</p>';
+      }
+    }
+
+    async function switchSim(name) {
+      await post(`/api/simulations/switch/${encodeURIComponent(name)}`);
+      currentSim = name;
+      $('world-name').textContent = name;
+      clearCreatures();
+      seenIds = null;
+      resetCharts();
+      journal.length = 0;
+      seenEventKeys.clear();
+      swallowEvents = true;
+      bootedMilestones = false;
+      closeModal('modal-launcher');
+      syncHistory();
+    }
+
+    function bindSlider(sliderId, labelId, format) {
+      const slider = $(sliderId);
+      const label = $(labelId);
+      const paint = () => { label.textContent = format(slider.value); };
+      slider.addEventListener('input', paint);
+      paint();
+    }
+    const plain = (v) => String(v);
+    const mult = (v) => `${v}×`;
+    const meta = (v) => Number(v).toFixed(3);
+    bindSlider('launcher-sim-pop', 'val-launch-pop', plain);
+    bindSlider('launcher-sim-food', 'val-launch-food', plain);
+    bindSlider('launcher-sim-food-rate', 'val-launch-food-rate', plain);
+    bindSlider('launcher-sim-size', 'val-launch-size', plain);
+    bindSlider('launcher-sim-mut', 'val-launch-mut', mult);
+    bindSlider('launcher-sim-meta', 'val-launch-meta', meta);
+    bindSlider('live-food-rate', 'val-live-food-rate', plain);
+    bindSlider('live-meta', 'val-live-meta', meta);
+    bindSlider('live-mut', 'val-live-mut', mult);
+
+    $('btn-submit-create-sim').addEventListener('click', async () => {
+      const btn = $('btn-submit-create-sim');
+      btn.disabled = true;
+      try {
+        const name = $('launcher-sim-name').value.trim() || 'lug';
+        const payload = {
+          name,
+          creatures: parseInt($('launcher-sim-pop').value, 10),
+          food: parseInt($('launcher-sim-food').value, 10),
+          world_size: parseFloat($('launcher-sim-size').value),
+          mutation_rate: parseFloat($('launcher-sim-mut').value),
+          enable_pioneer_reseeding: $('launcher-sim-reseed').value === 'true'
+        };
+        const created = await post('/api/simulations/new', payload);
+        await post('/api/config/update', {
+          food_spawn_rate: parseFloat($('launcher-sim-food-rate').value),
+          base_metabolism: parseFloat($('launcher-sim-meta').value),
+          mutation_rate: payload.mutation_rate,
+          enable_pioneer_reseeding: payload.enable_pioneer_reseeding
+        });
+        currentSim = created;
+        clearCreatures();
+        seenIds = null;
+        resetCharts();
+        journal.length = 0;
+        seenEventKeys.clear();
+        swallowEvents = true;
+        bootedMilestones = false;
+        closeModal('modal-launcher');
+        syncHistory();
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    $('btn-config').addEventListener('click', async () => {
+      $('cfg-sim-name').textContent = currentSim;
+      try {
+        const cfg = await (await fetch('/api/config/current')).json();
+        $('live-food-rate').value = cfg.food_spawn_per_sec;
+        $('live-meta').value = cfg.base_metabolism;
+        $('live-mut').value = cfg.mutation_rate_multiplier;
+        $('live-reseed-toggle').value = cfg.enable_pioneer_reseeding ? 'true' : 'false';
+        $('live-food-rate').dispatchEvent(new Event('input'));
+        $('live-meta').dispatchEvent(new Event('input'));
+        $('live-mut').dispatchEvent(new Event('input'));
+      } catch { /* keep previous values */ }
+      openModal('modal-world-config');
+    });
+    $('btn-close-world-config').addEventListener('click', () => closeModal('modal-world-config'));
+    $('btn-cancel-world-config').addEventListener('click', () => closeModal('modal-world-config'));
+    $('btn-apply-world-config').addEventListener('click', async () => {
+      await post('/api/config/update', {
+        food_spawn_rate: parseFloat($('live-food-rate').value),
+        base_metabolism: parseFloat($('live-meta').value),
+        mutation_rate: parseFloat($('live-mut').value),
+        enable_pioneer_reseeding: $('live-reseed-toggle').value === 'true'
+      });
+      closeModal('modal-world-config');
+    });
+
+    function typingTarget(event) {
+      const tag = event.target && event.target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+    }
+    window.addEventListener('keydown', (event) => {
+      if (typingTarget(event)) return;
+      const topModal = ['modal-launcher', 'modal-world-config', 'modal-graphics', 'modal-help', 'modal-confirm-reset'].find((id) => !$(id).hidden);
+      if (event.key === 'Escape') {
+        if (topModal) closeModal(topModal);
+        else if (selectedId != null) deselect();
+        else if (focusLine != null || focusCluster != null) { focusLine = null; focusCluster = null; updateFocusChip(); }
+        else if (!$('atlas').classList.contains('is-collapsed')) setAtlas(false);
+        return;
+      }
+      if (topModal) return;
+      if (event.code === 'Space') { event.preventDefault(); sendSpeed(rememberedSpeed || 1, !worldPaused); }
+      else if (event.code === 'Digit1') sendSpeed(1, false);
+      else if (event.code === 'Digit2') sendSpeed(5, false);
+      else if (event.code === 'Digit3') sendSpeed(20, false);
+      else if (event.code === 'Digit4') sendSpeed(100, false);
+      else if (event.code === 'KeyF') setFollow(!follow);
+      else if (event.code === 'KeyV') setScent(!showScent);
+      else if (event.code === 'KeyL') setDiet(!dietLens);
+      else if (event.code === 'KeyC') $('btn-top').click();
+      else if (event.code === 'KeyR') $('btn-home').click();
+      else if (event.code === 'KeyH') setClean(!document.body.classList.contains('is-clean'));
+    });
+
+    let veilReady = false;
+    function hideVeil() {
+      $('veil').classList.add('is-gone');
+      store.set('blob.intro', '1');
+    }
+    $('veil-go').addEventListener('click', hideVeil);
+    if (store.get('blob.intro', '0') === '1') $('veil-go').textContent = 'Вернуться к лугу';
+
+    let ws;
     function connectWs() {
-      const wsProto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      ws = new WebSocket(`${wsProto}//${window.location.host}/ws`);
-
+      const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(`${proto}//${location.host}/ws`);
       ws.onopen = () => {
-        shield.classList.add('hidden');
-        syncHistory(currentSimName);
+        $('link-bar').hidden = true;
+        $('veil-status').textContent = 'Луг на связи.';
+        $('veil-go').disabled = false;
+        veilReady = true;
+        if (store.get('blob.intro', '0') === '1') hideVeil();
+        syncHistory();
       };
-
       ws.onclose = () => {
-        shield.classList.remove('hidden');
-        setTimeout(connectWs, 1500);
+        if (veilReady && $('veil').classList.contains('is-gone')) $('link-bar').hidden = false;
+        else {
+          $('veil-status').textContent = 'Движок молчит. Пробуем ещё раз…';
+          $('veil-go').disabled = true;
+        }
+        setTimeout(connectWs, 1400);
       };
-
       ws.onerror = () => ws.close();
-
-      ws.onmessage = (e) => {
-        try {
-          const snapshot = JSON.parse(e.data);
-          renderSnapshot(snapshot);
-        } catch (err) {}
+      ws.onmessage = (event) => {
+        try { renderSnapshot(JSON.parse(event.data)); }
+        catch (err) { console.error(err); }
       };
     }
     connectWs();
 
-    // --- RENDER SNAPSHOT ---
-    let activeCreatureIds = new Set();
-    let selectedCreatureId = null;
-    let followCamera = false;
-
-    function renderSnapshot(s) {
-      if (s.active_sim && s.active_sim !== currentSimName) {
-        currentSimName = s.active_sim;
-        document.getElementById('active-sim-badge').innerText = s.active_sim;
-        creatureMeshes.forEach(mesh => scene.remove(mesh));
-        creatureMeshes.clear();
-        selectedCreatureId = null;
-        document.getElementById('inspector').style.display = 'none';
-        resetAllCharts();
-        syncHistory(currentSimName);
-        return;
-      }
-
-      if (s.tick < lastChartTick) {
-        resetAllCharts();
-      }
-
-      // Live Stats
-      document.getElementById('stat-tps').innerText = `${Math.round(s.tps)} TPS`;
-      document.getElementById('stat-tick').innerText = s.tick;
-      document.getElementById('stat-pop').innerText = s.stats.population;
-      document.getElementById('stat-herbs').innerText = s.stats.herbivores;
-      document.getElementById('stat-carns').innerText = s.stats.carnivores;
-      document.getElementById('stat-food').innerText = s.stats.food_count;
-      document.getElementById('stat-meat').innerText = s.stats.meat_count;
-      document.getElementById('stat-gen').innerText = s.stats.max_generation;
-      document.getElementById('stat-births').innerText = s.stats.total_births;
-      document.getElementById('stat-deaths').innerText = s.stats.total_deaths;
-      document.getElementById('stat-pred-deaths').innerText = s.stats.predation_deaths;
-      document.getElementById('stat-energy').innerText = `${Math.round(s.stats.total_energy_pool)} kcal`;
-      document.getElementById('active-sim-badge').innerText = s.active_sim;
-
-      // Update Charts smoothly
-      if (!isSyncingHistory && (s.tick >= lastChartTick + 25 || lastChartTick === 0)) {
-        appendChartPoint(
-          s.tick,
-          s.stats.population,
-          s.stats.food_count,
-          s.stats.meat_count,
-          s.stats.avg_eyes,
-          s.stats.avg_jaw,
-          s.stats.avg_radius
-        );
-        lastChartTick = s.tick;
-      }
-
-      // Update Species List in Tab 2
-      if (s.tick % 30 === 0 && s.species) {
-        renderSpecies(s.species);
-      }
-
-      // Update Event Ticker
-      if (s.recent_events && s.recent_events.length > 0) {
-        const last = s.recent_events[s.recent_events.length - 1];
-        document.getElementById('ticker-tag').innerText = last.level;
-        document.getElementById('ticker-msg').innerText = `[T:${last.tick}] ${last.message}`;
-      }
-
-      // Update Creature 3D Meshes
-      activeCreatureIds.clear();
-      for (let i = 0; i < s.creatures.length; i++) {
-        const c = s.creatures[i];
-        activeCreatureIds.add(c.id);
-
-        let group = creatureMeshes.get(c.id);
-        if (!group) {
-          group = createCreatureMesh(c);
-          creatureMeshes.set(c.id, group);
-        }
-
-        group.position.set(c.x, 0, c.y);
-        group.rotation.y = -c.rot + Math.PI / 2;
-        group.scale.set(c.r, c.r, c.r);
-
-        const dome = group.getObjectByName("dome");
-        if (dome) {
-          const lum = 0.35 + c.nrg * 0.3;
-          dome.material.color.setHSL(c.hue, c.sat, lum);
-        }
-
-        if (followCamera && selectedCreatureId === c.id) {
-          controls.target.lerp(group.position, 0.12);
-        }
-      }
-
-      creatureMeshes.forEach((mesh, id) => {
-        if (!activeCreatureIds.has(id)) {
-          scene.remove(mesh);
-          creatureMeshes.delete(id);
-        }
-      });
-
-      // Food Instancing
-      foodInstanced.count = Math.min(s.food.length, 1600);
-      for (let i = 0; i < foodInstanced.count; i++) {
-        dummy.position.set(s.food[i][0], 0.25, s.food[i][1]);
-        dummy.scale.set(0.65, 0.65, 0.65);
-        dummy.updateMatrix();
-        foodInstanced.setMatrixAt(i, dummy.matrix);
-      }
-      foodInstanced.instanceMatrix.needsUpdate = true;
-
-      // Meat Instancing
-      meatInstanced.count = Math.min(s.meat.length, 800);
-      for (let i = 0; i < meatInstanced.count; i++) {
-        const [mx, my, mr, nrg] = s.meat[i];
-        dummy.position.set(mx, 0, my);
-        const curScale = mr * (0.4 + nrg * 0.6);
-        dummy.scale.set(curScale, curScale * 0.7, curScale);
-        dummy.updateMatrix();
-        meatInstanced.setMatrixAt(i, dummy.matrix);
-      }
-      meatInstanced.instanceMatrix.needsUpdate = true;
-
-      if (selectedCreatureId && s.tick % 10 === 0) {
-        fetchCreatureDetail(selectedCreatureId);
-      }
-    }
-
-    function renderSpecies(speciesList) {
-      const container = document.getElementById('species-container');
-      container.innerHTML = '';
-      speciesList.forEach(sp => {
-        const pillClass = sp.avg_jaw < 0.28 ? 'pill-herb' : (sp.avg_jaw > 0.52 ? 'pill-carn' : 'pill-omni');
-        const card = document.createElement('div');
-        card.className = 'species-card';
-        card.innerHTML = `
-          <div class="species-header">
-            <div class="species-name">
-              <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${sp.color_hex};"></span>
-              ${sp.name}
-            </div>
-            <span class="species-pill ${pillClass}">${sp.diet} (${sp.count})</span>
-          </div>
-          <div style="font-size:12px;color:#94a3b8;display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-            <div>Глаз: <b style="color:#f8fafc">${sp.avg_eyes.toFixed(1)}</b></div>
-            <div>Челюсть: <b style="color:#f8fafc">${sp.avg_jaw.toFixed(2)}</b></div>
-            <div>Скорость: <b style="color:#f8fafc">${sp.avg_speed.toFixed(1)}</b></div>
-            <div>Броня: <b style="color:#f8fafc">${sp.avg_armor.toFixed(2)}</b></div>
-          </div>
-        `;
-        container.appendChild(card);
-      });
-    }
-
-    // --- RAYCASTING & CREATURE SELECTION ---
-    const raycaster = new THREE.Raycaster();
-    const mouse = new THREE.Vector2();
-
-    window.addEventListener('click', (e) => {
-      if (e.target.closest('.interactive') || e.target.closest('.modal-box')) return;
-      mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-      raycaster.setFromCamera(mouse, camera);
-
-      const targets = [];
-      creatureMeshes.forEach(mesh => targets.push(mesh.getObjectByName("dome")));
-      const hits = raycaster.intersectObjects(targets);
-
-      if (hits.length > 0) {
-        const parent = hits[0].object.parent;
-        if (parent && parent.userData.id) {
-          selectCreature(parent.userData.id);
-        }
-      }
-    });
-
-    function selectCreature(id) {
-      selectedCreatureId = id;
-      document.getElementById('inspector').style.display = 'block';
-      fetchCreatureDetail(id);
-    }
-
-    document.getElementById('insp-close').addEventListener('click', () => {
-      selectedCreatureId = null;
-      followCamera = false;
-      document.getElementById('inspector').style.display = 'none';
-    });
-
-    document.getElementById('btn-follow').addEventListener('click', () => {
-      followCamera = !followCamera;
-      document.getElementById('btn-follow').innerText = followCamera ? '🛑 Отвязать камеру' : '🎥 Следить камерой';
-    });
-
-    async function fetchCreatureDetail(id) {
-      if (!selectedCreatureId) return;
-      try {
-        const res = await fetch(`/api/creature/${id}`);
-        const c = await res.json();
-        if (!c) {
-          document.getElementById('insp-name').innerText = `Особь #${id} (Погибла)`;
-          return;
-        }
-
-        document.getElementById('insp-name').innerText = `Особь #${c.id}`;
-        document.getElementById('insp-lineage').innerText = c.lineage_id;
-        document.getElementById('insp-energy-text').innerText = `${Math.round(c.energy)} / ${Math.round(c.max_energy)}`;
-        document.getElementById('insp-energy-bar').style.width = `${Math.max(0, Math.min(100, (c.energy / c.max_energy) * 100))}%`;
-
-        document.getElementById('insp-health-text').innerText = `${Math.round(c.health)} / ${Math.round(c.max_health)}`;
-        document.getElementById('insp-health-bar').style.width = `${Math.max(0, Math.min(100, (c.health / c.max_health) * 100))}%`;
-
-        document.getElementById('insp-age-text').innerText = `${Math.round(c.age)} / ${Math.round(c.lifespan)}`;
-        document.getElementById('insp-age-bar').style.width = `${Math.max(0, Math.min(100, (c.age / c.lifespan) * 100))}%`;
-
-        document.getElementById('insp-gen').innerText = c.generation;
-        document.getElementById('insp-eyes').innerText = c.eye_count;
-        document.getElementById('insp-jaw').innerText = c.jaw_strength.toFixed(2);
-        document.getElementById('insp-spk').innerText = c.armor_spikes.toFixed(2);
-        document.getElementById('insp-speed').innerText = c.speed.toFixed(1);
-        document.getElementById('insp-radius').innerText = c.radius.toFixed(2);
-        document.getElementById('insp-kills').innerText = c.kills;
-        document.getElementById('insp-kids').innerText = c.offspring;
-        document.getElementById('insp-choosiness').innerText = c.choosiness.toFixed(2);
-
-        const nCont = document.getElementById('neuron-container');
-        nCont.innerHTML = '';
-        for (let i = 0; i < c.brain_hidden.length; i++) {
-          const val = c.brain_hidden[i];
-          const div = document.createElement('div');
-          div.className = 'neuron';
-          const r = val < 0 ? Math.floor(Math.abs(val) * 220) : 30;
-          const g = val > 0 ? Math.floor(val * 240) : 40;
-          div.style.background = `rgb(${r}, ${g}, 80)`;
-          nCont.appendChild(div);
-        }
-      } catch (e) {}
-    }
-
-    // --- BUTTON CONTROLS ---
-    function sendSpeed(spd, paused = false) {
-      fetch('/api/speed', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ speed: spd, paused: paused })
-      });
-      document.querySelectorAll('.controls-card .btn').forEach(b => b.classList.remove('active'));
-    }
-
-    document.getElementById('btn-pause').addEventListener('click', function() { sendSpeed(0.0, true); this.classList.add('active'); });
-    document.getElementById('btn-1x').addEventListener('click', function() { sendSpeed(1.0, false); this.classList.add('active'); });
-    document.getElementById('btn-5x').addEventListener('click', function() { sendSpeed(5.0, false); this.classList.add('active'); });
-    document.getElementById('btn-20x').addEventListener('click', function() { sendSpeed(20.0, false); this.classList.add('active'); });
-    document.getElementById('btn-100x').addEventListener('click', function() { sendSpeed(100.0, false); this.classList.add('active'); });
-
-    document.getElementById('btn-food').addEventListener('click', () => fetch('/api/action/food', { method: 'POST' }));
-    document.getElementById('btn-meat').addEventListener('click', () => fetch('/api/action/meat', { method: 'POST' }));
-    document.getElementById('btn-radiation').addEventListener('click', () => fetch('/api/action/radiation', { method: 'POST' }));
-    document.getElementById('btn-meteor').addEventListener('click', () => fetch('/api/action/meteor', { method: 'POST' }));
-
-    // --- MODAL 1: SAFE RESET CONFIRMATION ---
-    const modalReset = document.getElementById('modal-confirm-reset');
-    document.getElementById('btn-open-reset-confirm').addEventListener('click', () => {
-      document.getElementById('reset-sim-target').innerText = currentSimName;
-      modalReset.style.display = 'flex';
-    });
-    document.getElementById('btn-cancel-reset').addEventListener('click', () => modalReset.style.display = 'none');
-    document.getElementById('btn-cancel-reset-x').addEventListener('click', () => modalReset.style.display = 'none');
-
-    document.getElementById('btn-do-reset').addEventListener('click', async () => {
-      modalReset.style.display = 'none';
-      await fetch('/api/action/reset', { method: 'POST' });
-      resetAllCharts();
-      syncHistory(currentSimName);
-    });
-
-    // ═══════════════════════════════════════════════════════════════
-    // LAUNCHER & WORLDS HUB (NO DUPLICATED SETTINGS)
-    // ═══════════════════════════════════════════════════════════════
-    const modalLauncher = document.getElementById('modal-launcher');
-
-    document.getElementById('btn-open-launcher').addEventListener('click', openLauncher);
-    document.getElementById('btn-launcher-exit').addEventListener('click', closeLauncher);
-
-    function openLauncher() {
-      loadLauncherSimList();
-      modalLauncher.style.display = 'flex';
-    }
-
-    function closeLauncher() {
-      modalLauncher.style.display = 'none';
-    }
-
-    document.getElementById('tab-launch-existing').addEventListener('click', () => {
-      document.getElementById('tab-launch-existing').classList.add('active');
-      document.getElementById('tab-launch-new').classList.remove('active');
-      document.getElementById('launch-existing-list').style.display = 'block';
-      document.getElementById('launch-new-form').style.display = 'none';
-      loadLauncherSimList();
-    });
-
-    document.getElementById('tab-launch-new').addEventListener('click', async () => {
-      document.getElementById('tab-launch-new').classList.add('active');
-      document.getElementById('tab-launch-existing').classList.remove('active');
-      document.getElementById('launch-new-form').style.display = 'block';
-      document.getElementById('launch-existing-list').style.display = 'none';
-
-      try {
-        const res = await fetch('/api/simulations');
-        const list = await res.json();
-        const existingNames = new Set(list.map(s => s.name));
-        let num = list.length + 1;
-        while (existingNames.has(`world_${num}`)) {
-          num++;
-        }
-        document.getElementById('launcher-sim-name').value = `world_${num}`;
-      } catch (e) {
-        document.getElementById('launcher-sim-name').value = 'world_new';
-      }
-    });
-
-    async function loadLauncherSimList() {
-      try {
-        const res = await fetch('/api/simulations');
-        const list = await res.json();
-        const activeName = document.getElementById('active-sim-badge').innerText;
-        const container = document.getElementById('launcher-sim-cards');
-        container.innerHTML = '';
-
-        list.forEach(item => {
-          const isActive = item.name === activeName;
-          const card = document.createElement('div');
-          card.className = `sim-card ${isActive ? 'active' : ''}`;
-          card.innerHTML = `
-            <div style="flex: 1;">
-              <div class="sim-name">${item.name} ${isActive ? '<span style="color:#4ade80;font-size:12px;">(Активен)</span>' : ''}</div>
-              <div class="sim-meta">Тик: ${item.last_tick} • Рождений: ${item.total_births} • Смертей: ${item.total_deaths} • Пик: ${item.peak_population}</div>
-            </div>
-            <div style="display:flex; gap:8px; align-items:center;">
-              ${!isActive ? `
-                <button class="btn active btn-launcher-switch" data-sim="${item.name}">Войти в мир</button>
-                <button class="btn danger btn-launcher-delete" data-sim="${item.name}" title="Удалить мир со всеми файлами">🗑️</button>
-              ` : '<button class="btn-return btn-close-modal">В симуляцию</button>'}
-            </div>
-          `;
-          container.appendChild(card);
-        });
-
-        document.querySelectorAll('.btn-launcher-switch').forEach(btn => {
-          btn.addEventListener('click', async (e) => {
-            const name = e.target.getAttribute('data-sim');
-            await fetch(`/api/simulations/switch/${name}`, { method: 'POST' });
-            currentSimName = name;
-            document.getElementById('active-sim-badge').innerText = name;
-            resetAllCharts();
-            syncHistory(name);
-            closeLauncher();
-          });
-        });
-
-        document.querySelectorAll('.btn-launcher-delete').forEach(btn => {
-          btn.addEventListener('click', async (e) => {
-            const name = e.target.getAttribute('data-sim');
-            if (confirm(`Вы действительно хотите удалить мир '${name}' со всеми логами и файлами с диска?`)) {
-              try {
-                const res = await fetch(`/api/simulations/delete/${name}`, { method: 'POST' });
-                if (res.ok) {
-                  loadLauncherSimList();
-                } else {
-                  const txt = await res.text();
-                  alert(`Не удалось удалить: ${txt}`);
-                }
-              } catch (err) {
-                alert(`Ошибка удаления: ${err.message}`);
-              }
-            }
-          });
-        });
-
-        document.querySelectorAll('.btn-close-modal').forEach(btn => {
-          btn.addEventListener('click', closeLauncher);
-        });
-      } catch (e) {}
-    }
-
-    // Sliders sync helper
-    const bindSlider = (sliderId, valId, suffix = '') => {
-      const s = document.getElementById(sliderId);
-      const v = document.getElementById(valId);
-      s.addEventListener('input', () => v.innerText = s.value + suffix);
-    };
-    bindSlider('launcher-sim-pop', 'val-launch-pop');
-    bindSlider('launcher-sim-food', 'val-launch-food');
-    bindSlider('launcher-sim-food-rate', 'val-launch-food-rate');
-    bindSlider('launcher-sim-size', 'val-launch-size');
-    bindSlider('launcher-sim-mut', 'val-launch-mut', 'x');
-    bindSlider('launcher-sim-meta', 'val-launch-meta');
-
-    // Create New World Submit
-    document.getElementById('btn-submit-create-sim').addEventListener('click', async () => {
-      const rawName = document.getElementById('launcher-sim-name').value.trim();
-      const name = rawName.length > 0 ? rawName : 'world';
-      const creatures = parseInt(document.getElementById('launcher-sim-pop').value);
-      const food = parseInt(document.getElementById('launcher-sim-food').value);
-      const world_size = parseFloat(document.getElementById('launcher-sim-size').value);
-      const mutation_rate = parseFloat(document.getElementById('launcher-sim-mut').value);
-      const enable_pioneer_reseeding = document.getElementById('launcher-sim-reseed').value === 'true';
-
-      const res = await fetch('/api/simulations/new', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, creatures, food, world_size, mutation_rate, enable_pioneer_reseeding })
-      });
-      const createdName = await res.json();
-
-      // Update food spawn rate & metabolism in this new world
-      const food_spawn_rate = parseFloat(document.getElementById('launcher-sim-food-rate').value);
-      const base_metabolism = parseFloat(document.getElementById('launcher-sim-meta').value);
-      await fetch('/api/config/update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ food_spawn_rate, base_metabolism, mutation_rate, enable_pioneer_reseeding })
-      });
-
-      currentSimName = createdName;
-      document.getElementById('active-sim-badge').innerText = createdName;
-      resetAllCharts();
-      syncHistory(createdName);
-      loadLauncherSimList();
-      closeLauncher();
-    });
-
-    // ═══════════════════════════════════════════════════════════════
-    // LIVE WORLD CONFIG (NO DUPLICATES)
-    // ═══════════════════════════════════════════════════════════════
-    const modalWorldConfig = document.getElementById('modal-world-config');
-
-    document.getElementById('btn-open-world-config').addEventListener('click', async () => {
-      document.getElementById('cfg-sim-name').innerText = currentSimName;
-      try {
-        const res = await fetch('/api/config/current');
-        const cfg = await res.json();
-        document.getElementById('live-food-rate').value = cfg.food_spawn_per_sec;
-        document.getElementById('val-live-food-rate').innerText = cfg.food_spawn_per_sec;
-        document.getElementById('live-meta').value = cfg.base_metabolism;
-        document.getElementById('val-live-meta').innerText = cfg.base_metabolism;
-        document.getElementById('live-mut').value = cfg.mutation_rate_multiplier;
-        document.getElementById('val-live-mut').innerText = cfg.mutation_rate_multiplier + 'x';
-        document.getElementById('live-reseed-toggle').value = cfg.enable_pioneer_reseeding ? 'true' : 'false';
-      } catch (e) {}
-      modalWorldConfig.style.display = 'flex';
-    });
-
-    bindSlider('live-food-rate', 'val-live-food-rate');
-    bindSlider('live-meta', 'val-live-meta');
-    bindSlider('live-mut', 'val-live-mut', 'x');
-
-    document.getElementById('btn-close-world-config').addEventListener('click', () => modalWorldConfig.style.display = 'none');
-    document.getElementById('btn-cancel-world-config').addEventListener('click', () => modalWorldConfig.style.display = 'none');
-
-    document.getElementById('btn-apply-world-config').addEventListener('click', async () => {
-      const food_spawn_rate = parseFloat(document.getElementById('live-food-rate').value);
-      const base_metabolism = parseFloat(document.getElementById('live-meta').value);
-      const mutation_rate = parseFloat(document.getElementById('live-mut').value);
-      const enable_pioneer_reseeding = document.getElementById('live-reseed-toggle').value === 'true';
-
-      await fetch('/api/config/update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ food_spawn_rate, base_metabolism, mutation_rate, enable_pioneer_reseeding })
-      });
-      modalWorldConfig.style.display = 'none';
-    });
-
-    // ═══════════════════════════════════════════════════════════════
-    // GRAPHICS MODAL
-    // ═══════════════════════════════════════════════════════════════
-    const modalGfx = document.getElementById('modal-graphics');
-    document.getElementById('btn-open-graphics').addEventListener('click', () => modalGfx.style.display = 'flex');
-    document.getElementById('btn-close-graphics').addEventListener('click', () => modalGfx.style.display = 'none');
-
-    document.getElementById('btn-apply-graphics').addEventListener('click', () => {
-      const val = document.getElementById('gfx-preset').value;
-      const shadows = document.getElementById('gfx-shadows').value === 'on';
-      if (val === 'low') {
-        renderer.shadowMap.enabled = false;
-        dirLight.castShadow = false;
-      } else {
-        renderer.shadowMap.enabled = shadows;
-        dirLight.castShadow = shadows;
-      }
-      modalGfx.style.display = 'none';
-    });
-
-    // Global Escape key handler to close any open modal
-    window.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        if (modalLauncher.style.display === 'flex') {
-          closeLauncher();
-        } else if (modalWorldConfig.style.display === 'flex') {
-          modalWorldConfig.style.display = 'none';
-        } else if (modalGfx.style.display === 'flex') {
-          modalGfx.style.display = 'none';
-        } else if (modalReset.style.display === 'flex') {
-          modalReset.style.display = 'none';
-        } else {
-          openLauncher();
-        }
-      }
-    });
-
-    // --- ANIMATION LOOP ---
+    const clock = new THREE.Clock();
     function animate() {
       requestAnimationFrame(animate);
+      const dt = Math.min(0.05, clock.getDelta());
+      const t = clock.elapsedTime;
+      if (follow && selectedId != null && !selectedDead) {
+        const group = creatureMeshes.get(selectedId);
+        if (group) {
+          const rot = group.userData.rot || 0;
+          const backX = -Math.cos(rot) * 28;
+          const backZ = -Math.sin(rot) * 28;
+          controls.target.lerp(group.position, 0.08);
+          camera.position.lerp(new THREE.Vector3(group.position.x + backX, 16 + (group.userData.baseScale || 1) * 4, group.position.z + backZ), 0.045);
+        }
+      }
       controls.update();
+      if (shake > 0) {
+        camera.position.x += (Math.random() - 0.5) * shake;
+        camera.position.y += (Math.random() - 0.5) * shake * 0.6;
+        shake *= 0.9;
+        if (shake < 0.03) shake = 0;
+      }
+      creatureMeshes.forEach((group) => {
+        const base = group.userData.baseScale || 1;
+        const act = group.userData.act || 0;
+        const bite = (act & 1) !== 0;
+        const fertile = (act & 4) !== 0;
+        const pulse = fertile ? 1 + Math.sin(t * 3.2 + base) * 0.035 : 1;
+        const sx = bite ? 1.08 : 1;
+        const sy = bite ? 0.84 : 1;
+        group.scale.set(base * sx * pulse, base * sy, base * sx * pulse);
+      });
+      if (selectedId != null && creatureMeshes.has(selectedId) && !selectedDead) {
+        const group = creatureMeshes.get(selectedId);
+        ring.visible = true;
+        ring.position.set(group.position.x, 0.12, group.position.z);
+        const s = (group.userData.baseScale || 1) * 1.42;
+        ring.scale.set(s, s, 1);
+        ring.rotation.z = t * 0.6;
+        selLight.position.set(group.position.x, 4, group.position.z);
+        selLight.intensity = 0.65;
+      } else {
+        ring.visible = false;
+        selLight.intensity = 0;
+      }
+      poseFood(t);
+      stepSparks(dt);
+      if (shockT > 0) {
+        const span = Math.max(arenaW, arenaH, 40);
+        shock.visible = true;
+        shock.scale.setScalar(2 + (1 - shockT) * span * 0.75);
+        shock.material.opacity = shockT * 0.75;
+        shockT = Math.max(0, shockT - dt * 0.42);
+      } else shock.visible = false;
+      if (radPulse > 0) {
+        hemi.color.setRGB(1, 0.72, 0.95 + radPulse * 0.4);
+        radPulse = Math.max(0, radPulse - dt * 0.35);
+        if (radPulse === 0) hemi.color.setHex(0xfff4e4);
+      }
+      placeNameplate();
       renderer.render(scene, camera);
     }
     animate();
