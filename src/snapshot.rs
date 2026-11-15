@@ -1,5 +1,5 @@
 use crate::creature::Creature;
-use crate::species::{SpeciesAnalyzer, SpeciesInfo};
+use crate::species::{cluster_of, diet_of, SpeciesAnalyzer, SpeciesInfo};
 use crate::telemetry::SimEvent;
 use crate::world::{World, WorldStats};
 use serde::{Deserialize, Serialize};
@@ -17,7 +17,15 @@ pub struct CreatureRenderData {
     pub hp: f32,
     pub jaw: f32,
     pub spk: f32,
-    pub eyes: Vec<[f32; 3]>, // [azimuth, elevation, range]
+    /// [azimuth, elevation, range, fov]
+    pub eyes: Vec<[f32; 4]>,
+    pub gen: usize,
+    pub line: usize,
+    pub age: f32,
+    pub diet: u8,
+    pub cluster: u32,
+    /// bit 1 bite, bit 2 mate, bit 4 fertile, bit 8 thrusting
+    pub act: u8,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -32,6 +40,14 @@ pub struct WorldSnapshot {
     pub active_sim: String,
     pub available_sims: Vec<String>,
     pub recent_events: Vec<SimEvent>,
+    pub world_w: f32,
+    pub world_h: f32,
+    pub paused: bool,
+    pub speed: f32,
+    pub mut_rate: f32,
+    pub scent_w: usize,
+    pub scent_h: usize,
+    pub scent: Vec<u8>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -80,8 +96,22 @@ impl SnapshotBuilder {
                     .phenotype
                     .eyes
                     .iter()
-                    .map(|e| [e.azimuth, e.elevation, e.range])
+                    .map(|e| [e.azimuth, e.elevation, e.range, e.fov])
                     .collect();
+
+                let mut act = 0u8;
+                if c.last_action.bite {
+                    act |= 1;
+                }
+                if c.last_action.mate {
+                    act |= 2;
+                }
+                if c.is_fertile() {
+                    act |= 4;
+                }
+                if c.last_action.throttle > 0.55 {
+                    act |= 8;
+                }
 
                 CreatureRenderData {
                     id: c.id,
@@ -96,6 +126,12 @@ impl SnapshotBuilder {
                     jaw: c.phenotype.jaw_strength,
                     spk: c.phenotype.armor_spikes,
                     eyes,
+                    gen: c.generation,
+                    line: c.lineage_id,
+                    age: (c.age / c.phenotype.lifespan.max(1.0)).clamp(0.0, 1.0),
+                    diet: diet_of(c.phenotype.jaw_strength),
+                    cluster: cluster_of(c),
+                    act,
                 }
             })
             .collect();
@@ -109,6 +145,7 @@ impl SnapshotBuilder {
             .collect();
 
         let species = SpeciesAnalyzer::classify_population(&world.creatures);
+        let (scent_w, scent_h, scent) = world.chemical_grid.preview(28);
 
         WorldSnapshot {
             tick: world.tick,
@@ -121,6 +158,14 @@ impl SnapshotBuilder {
             active_sim: active_sim.to_string(),
             available_sims,
             recent_events,
+            world_w: world.config.world_width,
+            world_h: world.config.world_height,
+            paused: world.config.is_paused || world.config.time_scale <= 0.0,
+            speed: world.config.time_scale,
+            mut_rate: world.config.mutation_rate_multiplier,
+            scent_w,
+            scent_h,
+            scent,
         }
     }
 
